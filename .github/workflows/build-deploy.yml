@@ -51,12 +51,12 @@ jobs:
       # 6. 添加并提交更改
       - name: Commit changes
         run: |
-          git add index.html background.jpg
+          git add -f index.html background.jpg
           git commit -m '✅ Automated daily build: Update static website' || echo "☑️ No changes to commit"
 
       # 7. 推送更改到仓库 - 更新为最新版本的push action
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.RESP_TOKEN }}
           branch: ${{ github.ref }}
