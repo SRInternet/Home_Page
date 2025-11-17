@@ -24,28 +24,45 @@ def load_config():
         with open('config.json', 'r', encoding='utf-8') as f:
             config = json.load(f)
     except FileNotFoundError:
-        # 默认配置
-        config = {
-            "github_url": "https://github.com/example",
-            "dark_mode": "auto",
-            "name": "Example User",
-            "bio": "Python Developer",
-            "introduction_file": "Introduction.md",
-            "github_token": "",  # 添加GitHub令牌配置项
-            "theme": {
-                "primary_color": "#6a11cb",
-                "secondary_color": "#2575fc"
-            },
-            "background": {
-                "image": "background.png",
-                "blur": 8,
-                "overlay_opacity": 0.6,
-                "overlay_color": "#121212"
+        # 如果config.json不存在，尝试从default文件夹复制
+        default_config_path = os.path.join('default', 'default_config.json')
+        if os.path.exists(default_config_path):
+            print(f"config.json不存在，从{default_config_path}复制默认配置")
+            shutil.copy2(default_config_path, 'config.json')
+            # 读取复制过来的配置
+            with open('config.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            # 同时检查background.jpg是否存在，如果不存在也从default文件夹复制
+            if 'background' in config and 'image' in config['background']:
+                background_image = config['background']['image']
+                if not os.path.exists(background_image) and os.path.exists(os.path.join('default', background_image)):
+                    print(f"{background_image}不存在，从default文件夹复制")
+                    shutil.copy2(os.path.join('default', background_image), background_image)
+        else:
+            # 如果default_config.json也不存在，使用内置默认配置
+            print("default/default_config.json不存在，使用内置默认配置")
+            config = {
+                "github_url": "https://github.com/example",
+                "dark_mode": "auto",
+                "name": "Example User",
+                "bio": "Python Developer",
+                "introduction_file": "Introduction.md",
+                "github_token": "",  # 添加GitHub令牌配置项
+                "theme": {
+                    "primary_color": "#6a11cb",
+                    "secondary_color": "#2575fc"
+                },
+                "background": {
+                    "image": "background.png",
+                    "blur": 8,
+                    "overlay_opacity": 0.6,
+                    "overlay_color": "#121212"
+                }
             }
-        }
-        # 保存默认配置
-        with open('config.json', 'w', encoding='utf-8') as f:
-            json.dump(config, f, indent=2, ensure_ascii=False)
+            # 保存默认配置
+            with open('config.json', 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
 
 # 创建通用的GitHub API请求函数
 def make_github_request(url, timeout=5):

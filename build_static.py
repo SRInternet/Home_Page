@@ -19,16 +19,33 @@ print(f"将在项目根目录 {static_dir} 生成静态文件")
 
 print("正在准备生成静态文件...")
 
-# 读取config.json配置文件
+# 读取config.json配置文件，如不存在则从default文件夹复制
 config_path = os.path.join(here, 'config.json')
+default_config_path = os.path.join(here, 'default', 'default_config.json')
+
 if os.path.exists(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     # 从配置中获取背景图片文件名
     background_image = config.get('background', {}).get('image', 'background.jpg')
 else:
-    print("警告：未找到config.json文件，使用默认背景图片")
-    background_image = 'background.jpg'
+    print("警告：未找到config.json文件")
+    # 尝试从default文件夹复制默认配置
+    if os.path.exists(default_config_path):
+        print(f"从{default_config_path}复制默认配置到{config_path}")
+        shutil.copy2(default_config_path, config_path)
+        # 读取复制过来的配置
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        background_image = config.get('background', {}).get('image', 'background.jpg')
+        
+        # 同时检查背景图片是否存在，如果不存在也从default文件夹复制
+        if background_image and not os.path.exists(background_image) and os.path.exists(os.path.join('default', background_image)):
+            print(f"{background_image}不存在，从default文件夹复制")
+            shutil.copy2(os.path.join('default', background_image), background_image)
+    else:
+        print("警告：default/default_config.json也不存在，使用默认背景图片")
+        background_image = 'background.jpg'
 
 # 导入app.py并使用Flask测试客户端
 try:
@@ -106,20 +123,16 @@ for file in [background_image]:  # 使用从配置中读取的背景图片文件
 print("\n静态文件构建完成！")
 print(f"\n静态HTML文件已生成在项目根目录: {os.path.join(static_dir, 'index.html')}")
 print(f"\n如何部署到GitHub Pages:")
-print("方式一：手动部署")
+print("方式一：自动部署（已配置GitHub Pages Actions）")
+print("1. 当您推送到main或master分支时，GitHub Actions会自动运行")
+print("2. GitHub Actions也会在每天UTC时间0点（北京时间8点）自动运行")
+print("3. 您也可以通过GitHub仓库的Actions页面手动触发运行")
+print("4. 构建产物会直接部署到GitHub Pages，无需额外配置GitHub Token")
+print("\n方式二：手动部署")
 print("1. 确保您已经在项目根目录")
-print("2. 添加并提交所有文件")
-print("3. 将文件推送到GitHub仓库的gh-pages分支")
-print("\n手动部署示例命令：")
-print(f"git add index.html {background_image}")  # 使用从配置中读取的背景图片文件名
-print("git commit -m 'Deploy to GitHub Pages'")
-print("git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git")
-print("git push origin master:gh-pages")
-print("\n方式二：自动部署（已配置GitHub Actions）")
-print("1. GitHub Actions将在每天UTC时间0点（北京时间8点）自动运行")
-print("2. 也可以通过GitHub仓库的Actions页面手动触发运行")
-print("3. 自动构建会生成静态文件并提交到当前分支")
+print("2. 直接将生成的index.html和background.jpg文件部署到您的Web服务器")
 print("\n注意：")
-print("1. 您需要将YOUR_USERNAME和YOUR_REPO替换为您的GitHub用户名和仓库名")
-print("2. 确保GitHub仓库有正确的权限配置，GitHub Actions默认可以访问仓库内容")
-print("3. 如果仓库是私有的，可能需要额外配置secrets")
+print("1. 使用GitHub Pages部署方式不需要配置GitHub Token")
+print("2. 部署不会在仓库中产生额外的提交记录")
+print("3. 确保GitHub仓库启用了GitHub Pages功能")
+print("4. 访问路径通常为 https://YOUR_USERNAME.github.io/YOUR_REPO/")

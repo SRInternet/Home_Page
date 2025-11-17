@@ -411,7 +411,7 @@
     <!-- 页脚 -->
     <footer class="glass-panel bg-white/30 dark:bg-gray-800/30 shadow-inner py-6">
         <div class="container mx-auto px-4 text-center text-gray-600 dark:text-gray-400">
-            <p>© {{ now.year }} {{ github_info.name }}. 个人主页由 Flask + Tailwind CSS 驱动。</p>
+            <p>© {{ now.year }} {{ github_info.name }}. <a href="https://github.com/SRInternet/Home_Page/" target="_blank">个人主页</a>由 Flask + Tailwind CSS 驱动。</p>
             <div class="mt-3 space-x-4">
                 <!-- 联系方式图标，仅在配置了有效URL时显示 -->
                 {% if config.contact.qq and config.contact.qq != '' %}
