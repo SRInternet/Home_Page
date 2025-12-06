@@ -1,8 +1,8 @@
 {
- "github_url": "https://github.com/fuxiaoji",
+  "github_url": "https://github.com/example",
   "dark_mode": "auto",
-  "name": "fuwenji",
-  "bio": "economic student | tech enthusiast | web3 explorer",
+  "name": "Example User",
+  "bio": "Python Developer | Web Enthusiast",
   "introduction_file": "Introduction.md",
   "theme": {
     "primary_color": "#6a11cb",
@@ -18,8 +18,8 @@
     "dark_overlay_color": "#121212"
   },
   "contact": {
-    "qq": "1105793864",
-    "wechat": "+86 13983711565",
-    "bilibili": "https://space.bilibili.com/480295330?spm_id_from=333.1007.0.0"
+    "qq": "",
+    "wechat": "",
+    "bilibili": ""
   }
 }

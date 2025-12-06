@@ -1,25 +1,24 @@
-# 个人主页
+# Personal Home Page
 
-欢迎来到我的个人主页！这里是我展示自己的空间。
+Welcome to my personal home page! This is my space to showcase myself.
 
-## 关于我
+## About Me
 
-我是一名热爱编程的在读金融专业大学生，喜欢探索新技术和解决各种有趣的问题。
+I'm a developer passionate about coding and exploring new technologies. I enjoy solving interesting problems and building great projects.
 
-## 技术栈
+## Tech Stack
 
 - Python
 - JavaScript
 - HTML/CSS
-- Vue.js
-- c++
-- sol
+- TypeScript
+- React
+- Node.js
 
+## Projects
 
-## 项目展示
+Here you can view my latest projects and contributions on GitHub.
 
-在这里你可以查看我在 GitHub 上的最新项目和贡献。
+## Contact
 
-## 联系我
-
-如果你对我的项目感兴趣或者有任何问题，可以通过 GitHub 联系我。
+If you're interested in my projects or have any questions, feel free to contact me through GitHub.
