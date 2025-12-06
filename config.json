@@ -1,8 +1,8 @@
 {
- "github_url": "https://github.com/example",
+ "github_url": "https://github.com/fuxiaoji",
   "dark_mode": "auto",
-  "name": "Example User",
-  "bio": "Python Developer",
+  "name": "fuwenji",
+  "bio": "economic student | tech enthusiast | web3 explorer",
   "introduction_file": "Introduction.md",
   "theme": {
     "primary_color": "#6a11cb",
@@ -18,10 +18,8 @@
     "dark_overlay_color": "#121212"
   },
   "contact": {
-    "qq": "https://qm.qq.com/q/c7DY18rEju",
-    "wechat": "",
-    "bilibili": "https://space.bilibili.com/1969160969",
-    "douyin": "https://www.douyin.com/user/MS4wLjABAAAATzdjtBBrLLCn69TtPMeseuEUzztbNZzw-9f13adrfiM?relation=0&vid=7143257533807873316",
-    "xiaohongshu": "https://www.xiaohongshu.com/user/profile/6427cf87000000002901166e?xsec_token=YBcPhyaU45_o0XD1fWkS2AJAoXOxWm09mZUN0iNRSVK3E%3D&xsec_source=app_share&xhsshare=CopyLink&shareRedId=ODo0N0ZLPEA2NzUyOTgwNjg8OTg1OzxO&apptime=1760733353&share_id=f252abf542b54551b1c018c51f4a64c8&share_channel=copy_link"
+    "qq": "1105793864",
+    "wechat": "+86 13983711565",
+    "bilibili": "https://space.bilibili.com/480295330?spm_id_from=333.1007.0.0"
   }
 }
