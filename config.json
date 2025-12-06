@@ -1,0 +1,27 @@
+{
+ "github_url": "https://github.com/example",
+  "dark_mode": "auto",
+  "name": "Example User",
+  "bio": "Python Developer",
+  "introduction_file": "Introduction.md",
+  "theme": {
+    "primary_color": "#6a11cb",
+    "secondary_color": "#2575fc",
+    "dark_primary_color": "#a855f7",
+    "dark_secondary_color": "#60a5fa"
+  },
+  "background": {
+    "image": "background.jpg",
+    "blur": 4,
+    "overlay_opacity": 0.6,
+    "overlay_color": "#f3f4f6",
+    "dark_overlay_color": "#121212"
+  },
+  "contact": {
+    "qq": "https://qm.qq.com/q/c7DY18rEju",
+    "wechat": "",
+    "bilibili": "https://space.bilibili.com/1969160969",
+    "douyin": "https://www.douyin.com/user/MS4wLjABAAAATzdjtBBrLLCn69TtPMeseuEUzztbNZzw-9f13adrfiM?relation=0&vid=7143257533807873316",
+    "xiaohongshu": "https://www.xiaohongshu.com/user/profile/6427cf87000000002901166e?xsec_token=YBcPhyaU45_o0XD1fWkS2AJAoXOxWm09mZUN0iNRSVK3E%3D&xsec_source=app_share&xhsshare=CopyLink&shareRedId=ODo0N0ZLPEA2NzUyOTgwNjg8OTg1OzxO&apptime=1760733353&share_id=f252abf542b54551b1c018c51f4a64c8&share_channel=copy_link"
+  }
+}
