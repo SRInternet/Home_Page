@@ -66,4 +66,3 @@ static_build1/
 
 # 不需要workflows目录
 .github/workflows/
-index.html
