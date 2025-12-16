@@ -10,14 +10,26 @@ from datetime import datetime
 from flask import Flask, render_template_string
 import jinja2
 import shutil
-
 app = Flask(__name__)
 
 # 导入必要的库
 import time
 
 # 读取配置文件
-@app.before_first_request
+# 获取项目根目录（假设 app.py 在项目根目录）
+config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+
+with open(config_path, 'r', encoding='utf-8') as f:
+    config = json.load(f)
+
+
+
+def init_app():
+    # 你的初始化逻辑，比如预加载 Markdown 文件、构建数据等
+    print("App initialized")
+
+# 直接调用，不依赖请求
+init_app()
 def load_config():
     global config
     try:
