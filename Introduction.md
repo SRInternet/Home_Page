@@ -14,6 +14,7 @@
 - Flask
 - Vue.js
 - React
+- node.js
 
 ## 项目展示
 

@@ -1,4 +1,6 @@
 # 个人主页
+借用[https://github.com/SRInternet/Home_Page](https://github.com/SRInternet/Home_Page)
+
 
 一个基于 Flask 的现代化个人主页应用，可展示您的 GitHub 个人信息、项目和技术栈，并支持多种部署方式。
 

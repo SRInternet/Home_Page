@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chen-Ecut - 个人主页</title>
+    <!-- 网页图标，使用用户头像并确保是圆形的 -->
+    
+    <link rel="icon" href="https://avatars.githubusercontent.com/u/182081808?v=4" type="image/png">
+    <!-- 使用SVG过滤器确保头像显示为圆形 -->
+    <svg width="0" height="0" style="position:absolute;">
+        <filter id="roundAvatar">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur"/>
+            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo"/>
+            <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+        </filter>
+    </svg>
+
+
+
+    <style>
+        link[rel="icon"] {
+            filter: url(#roundAvatar);
+        }
+    </style>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 配置 Tailwind -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#6a11cb',
+                            dark: '#a855f7'
+                        },
+                        secondary: {
+                            DEFAULT: '#2575fc',
+                            dark: '#60a5fa'
+                        },
+                        'primary-dark': '#a855f7',
+                        'secondary-dark': '#60a5fa'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-gradient {
+                background-clip: text;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .bg-gradient-custom {
+                background: linear-gradient(135deg, #6a11cb, #2575fc);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+            /* 云母效果和边框光效 */
+            .glass-panel {
+                background: rgba(255, 255, 255, 0.6);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+                position: relative;
+                overflow: hidden;
+            }
+            .glass-panel::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(90deg, transparent, #6a11cb, transparent);
+                animation: border-glow 4s ease-in-out infinite;
+            }
+            .glass-panel::before {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(90deg, transparent, #2575fc, transparent);
+                animation: border-glow 4s ease-in-out infinite reverse;
+            }
+            /* 深色模式下的边框光效 */
+            .dark .glass-panel::after {
+                background: linear-gradient(90deg, transparent, #a855f7, transparent);
+            }
+            .dark .glass-panel::before {
+                background: linear-gradient(90deg, transparent, #60a5fa, transparent);
+            }
+            .dark .glass-panel {
+                background: rgba(17, 24, 39, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            }
+            @keyframes border-glow {
+                0%, 100% { opacity: 0.3; }
+                50% { opacity: 1; }
+            }
+        }
+    </style>
+    <style>
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* 背景样式 */
+        body {
+            
+            background-color: #121212;
+            
+        }
+        
+        /* 在没有背景图片时使用默认背景色 */
+        
+        
+        /* 背景图片容器 */
+        .bg-container {
+            
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            
+        }
+        
+        /* 背景图片 */
+        .bg-image {
+            
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('background.jpg');
+            background-size: cover;
+            background-position: center;
+            filter: blur(4px);
+            transform: scale(1.1); /* 略微放大以避免边缘出现空白 */
+            
+        }
+        
+        /* 背景遮罩 */
+        .bg-overlay {
+            
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f3f4f6;
+            opacity: 0.6;
+            
+        }
+        
+        /* 深色模式下的背景遮罩 */
+        .dark .bg-overlay {
+            
+            background-color: #121212;
+            
+        }
+        
+        /* 动画样式 */
+        .avatar-glow {
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 5px rgba(106, 17, 203, 0.3);
+            }
+            to {
+                box-shadow: 0 0 20px rgba(106, 17, 203, 0.8);
+            }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .readme-content {
+            animation: slideIn 0.8s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .repo-item {
+            transition: all 0.3s ease;
+        }
+        .repo-item:hover {
+            transform: translateX(5px);
+        }
+        .tech-icon {
+            filter: drop-shadow(0 0 5px rgba(106, 17, 203, 0.5));
+        }
+    </style>
+</head>
+<body class="text-gray-800 dark:text-gray-200 min-h-screen">
+    <!-- 背景容器 -->
+    <div class="bg-container">
+        <div class="bg-image"></div>
+        <div class="bg-overlay"></div>
+    </div>
+    
+    <!-- 顶部导航栏 -->
+    <nav class="fixed w-full top-0 z-50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <!-- 顶栏左上角显示头像和用户名 -->
+            <div class="flex items-center space-x-3">
+                
+                <img 
+                    src="https://avatars.githubusercontent.com/u/182081808?v=4" 
+                    alt="Chen-Ecut" 
+                    class="w-8 h-8 rounded-full border-2 border-white dark:border-gray-700 shadow-sm"
+                >
+                
+                <span class="font-bold text-lg">Chen-Ecut</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <!-- 极简模式开关 -->
+                <button id="minimal-mode-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors relative">
+                    <span class="sr-only">切换极简模式</span>
+                    <i class="fa-solid fa-columns text-gray-700 dark:text-gray-300"></i>
+                </button>
+                
+                <!-- 深色模式切换 -->
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-moon dark:hidden text-gray-700"></i>
+                    <i class="fa-solid fa-sun hidden dark:block text-yellow-400"></i>
+                </button>
+                <a href="https://github.com/Rkgua" target="_blank" rel="noopener noreferrer" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fa-brands fa-github text-xl"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="container mx-auto px-4 pt-24 pb-16">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 左侧个人信息 -->
+            <div class="lg:col-span-1 animate-fade-in">
+                <div class="glass-panel bg-white/30 dark:bg-gray-800/30 rounded-2xl shadow-xl p-6 card-hover">
+                    <!-- 头像 -->
+                    <div class="flex justify-center mb-6">
+                        <img 
+                            src="https://avatars.githubusercontent.com/u/182081808?v=4" 
+                            alt="Chen-Ecut" 
+                            class="w-36 h-36 rounded-full border-4 border-white dark:border-gray-700 shadow-lg avatar-glow"
+                        >
+                    </div>
+                    <!-- 基本信息 -->
+                    <div class="text-center mb-6">
+                        <h1 class="text-2xl font-bold mb-2">Chen-Ecut</h1>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4">Developer</p>
+                        <a 
+                            href="https://github.com/Rkgua" 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            class="inline-flex items-center px-4 py-2 rounded-full bg-gradient-custom text-white font-medium hover:opacity-90 transition-opacity"
+                        >
+                            <i class="fa-brands fa-github mr-2"></i>
+                            访问我的 GitHub
+                        </a>
+                    </div>
+                    <!-- 统计信息 -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-100 dark:bg-gray-700 rounded-xl p-4 text-center">
+                            <div class="text-2xl font-bold text-primary dark:text-primary-dark mb-1">4</div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">总仓库数</div>
+                        </div>
+                        <div class="bg-gray-100 dark:bg-gray-700 rounded-xl p-4 text-center">
+                            <div class="text-2xl font-bold text-secondary dark:text-secondary-dark mb-1">0</div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">总 Stars</div>
+                        </div>
+                    </div>
+                    <!-- 技术标签 -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-3">技术栈</h3>
+                    <div class="flex flex-wrap gap-2">
+                        
+                            
+                                <span class="px-3 py-1 rounded-full text-sm flex items-center text-white dark:text-white" style="background-color: #6a11cb;">
+                                    <i class="fa-solid fa-code mr-1 tech-icon"></i>
+                                    Python
+                                </span>
+                            
+                                <span class="px-3 py-1 rounded-full text-sm flex items-center text-white dark:text-white" style="background-color: #0e2e64;">
+                                    <i class="fa-solid fa-code mr-1 tech-icon"></i>
+                                    HTML/CSS
+                                </span>
+                            
+                                <span class="px-3 py-1 rounded-full text-sm flex items-center text-white dark:text-white" style="background-color: gray;">
+                                    <i class="fa-solid fa-code mr-1 tech-icon"></i>
+                                    Shell
+                                </span>
+                            
+                                <span class="px-3 py-1 rounded-full text-sm flex items-center text-white dark:text-white" style="background-color: #2575fc;">
+                                    <i class="fa-solid fa-code mr-1 tech-icon"></i>
+                                    JavaScript
+                                </span>
+                            
+                                <span class="px-3 py-1 rounded-full text-sm flex items-center text-white dark:text-white" style="background-color: #2a0651;">
+                                    <i class="fa-solid fa-code mr-1 tech-icon"></i>
+                                    Vue
+                                </span>
+                            
+                        
+                    </div>
+                </div>
+                </div>
+                
+                <!-- 活动图表 -->
+                <div class="glass-panel bg-white/30 dark:bg-gray-800/30 rounded-2xl shadow-xl p-6 mt-6 card-hover animate-fade-in" style="animation-delay: 0.2s;">
+                    <h3 class="text-lg font-semibold mb-3">GitHub 活动概览</h3>
+                    <div class="h-64">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧内容区域 -->
+            <div class="lg:col-span-2">
+                <!-- README 内容 -->
+                <div class="glass-panel bg-white/30 dark:bg-gray-800/30 rounded-2xl shadow-xl p-6 readme-content">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fa-solid fa-file-lines text-primary dark:text-primary-dark mr-2"></i>
+                        个人介绍
+                    </h2>
+                    <div class="prose dark:prose-invert max-w-none" id="readme-content">
+                        <h1>个人主页</h1>
+<p>欢迎来到我的个人主页！这里是我展示自己的空间。</p>
+<h2>关于我</h2>
+<p>我是一名热爱编程的开发者，喜欢探索新技术和解决各种有趣的问题。</p>
+<h2>技术栈</h2>
+<ul>
+<li>Python</li>
+<li>JavaScript</li>
+<li>HTML/CSS</li>
+<li>Flask</li>
+<li>Vue.js</li>
+<li>React</li>
+<li>node.js</li>
+</ul>
+<h2>项目展示</h2>
+<p>在这里你可以查看我在 GitHub 上的最新项目和贡献。</p>
+<h2>联系我</h2>
+<p>如果你对我的项目感兴趣或者有任何问题，可以通过 GitHub 联系我。</p>
+                    </div>
+                </div>
+
+                <!-- 最近仓库 -->
+                <div class="glass-panel bg-white/30 dark:bg-gray-800/30 rounded-2xl shadow-xl p-6 mt-6 card-hover animate-fade-in" style="animation-delay: 0.4s;">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fa-solid fa-folder-open text-primary dark:text-primary-dark mr-2"></i>
+                        最近项目
+                    </h2>
+                    <div class="space-y-4">
+                        
+                            
+                                <a href="https://github.com/Rkgua/Home_Page" target="_blank" rel="noopener noreferrer" class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-xl repo-item hover:bg-gray-100 dark:hover:bg-gray-600">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h3 class="text-lg font-semibold text-primary dark:text-primary-dark">Home_Page</h3>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                                            <i class="fa-solid fa-star mr-1"></i>
+                                            0
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">一个基于 Flask 的现代化个人主页应用，可展示您的 GitHub 个人信息、项目和技术栈，并支持多种部署方式。</p>
+                                    <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                                        <span>None</span>
+                                        <span class="update-date" data-date="2025-12-16T11:32:03Z">更新于 2025-12-16</span>
+                                    </div>
+                                </a>
+                            
+                                <a href="https://github.com/Rkgua/person_note_fronted" target="_blank" rel="noopener noreferrer" class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-xl repo-item hover:bg-gray-100 dark:hover:bg-gray-600">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h3 class="text-lg font-semibold text-primary dark:text-primary-dark">person_note_fronted</h3>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                                            <i class="fa-solid fa-star mr-1"></i>
+                                            0
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">None</p>
+                                    <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                                        <span>Vue</span>
+                                        <span class="update-date" data-date="2025-10-29T14:07:07Z">更新于 2025-10-29</span>
+                                    </div>
+                                </a>
+                            
+                                <a href="https://github.com/Rkgua/Project_test" target="_blank" rel="noopener noreferrer" class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-xl repo-item hover:bg-gray-100 dark:hover:bg-gray-600">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h3 class="text-lg font-semibold text-primary dark:text-primary-dark">Project_test</h3>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                                            <i class="fa-solid fa-star mr-1"></i>
+                                            0
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">None</p>
+                                    <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                                        <span>Vue</span>
+                                        <span class="update-date" data-date="2025-10-29T14:03:49Z">更新于 2025-10-29</span>
+                                    </div>
+                                </a>
+                            
+                                <a href="https://github.com/Rkgua/Wuthering_Wave_fronted" target="_blank" rel="noopener noreferrer" class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-xl repo-item hover:bg-gray-100 dark:hover:bg-gray-600">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h3 class="text-lg font-semibold text-primary dark:text-primary-dark">Wuthering_Wave_fronted</h3>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                                            <i class="fa-solid fa-star mr-1"></i>
+                                            0
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">None</p>
+                                    <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                                        <span>Vue</span>
+                                        <span class="update-date" data-date="2025-10-26T05:00:48Z">更新于 2025-10-26</span>
+                                    </div>
+                                </a>
+                            
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="glass-panel bg-white/30 dark:bg-gray-800/30 shadow-inner py-6">
+        <div class="container mx-auto px-4 text-center text-gray-600 dark:text-gray-400">
+            <p>© 2025 Chen-Ecut. <a href="https://github.com/SRInternet/Home_Page/" target="_blank">个人主页</a>由 Flask + Tailwind CSS 驱动。</p>
+            <div class="mt-3 space-x-4">
+                <!-- 联系方式图标，仅在配置了有效URL时显示 -->
+                
+                <a href="https://qm.qq.com" target="_blank" rel="noopener noreferrer" class="hover:text-primary dark:hover:text-primary-dark transition-colors">
+                    <i class="fa-brands fa-qq"></i>
+                </a>
+                
+                
+                
+                <a href="https://space.bilibili.com" target="_blank" rel="noopener noreferrer" class="hover:text-primary dark:hover:text-primary-dark transition-colors">
+                    <i class="fa-brands fa-bilibili"></i>
+                </a>
+                
+                
+                <a href="https://www.douyin.com" target="_blank" rel="noopener noreferrer" class="hover:text-primary dark:hover:text-primary-dark transition-colors">
+                    <i class="fa-brands fa-tiktok"></i>
+                </a>
+                
+                <a href="https://www.xiaohongshu.com" target="_blank" rel="noopener noreferrer" class="hover:text-primary dark:hover:text-primary-dark transition-colors">
+                    <i class="fa-solid fa-book"></i>
+                </a>
+                
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 深色模式切换
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const htmlElement = document.documentElement;
+            
+            // 检查本地存储或系统偏好
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            // 根据配置设置初始主题
+            const configDarkMode = 'auto';
+            if (savedTheme) {
+                htmlElement.classList.toggle('dark', savedTheme === 'dark');
+            } else if (configDarkMode === 'auto') {
+                htmlElement.classList.toggle('dark', prefersDark);
+            } else if (configDarkMode === 'dark') {
+                htmlElement.classList.add('dark');
+            }
+            
+            // 主题切换事件
+            themeToggle.addEventListener('click', function() {
+                htmlElement.classList.toggle('dark');
+                localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
+            });
+            
+            // 监听系统主题变化
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                if (configDarkMode === 'auto' && !localStorage.getItem('theme')) {
+                    htmlElement.classList.toggle('dark', e.matches);
+                }
+            });
+            
+            /* 极简模式功能 */
+            const minimalModeToggle = document.getElementById('minimal-mode-toggle');
+            // 修改选择器，包含所有板块，修复转义字符
+            const contentSections = document.querySelectorAll('div.lg\\:col-span-1, div.lg\\:col-span-2 > div');
+            const bgImage = document.querySelector('.bg-image');
+            let isMinimalMode = false;
+            
+            // 极简模式切换事件处理
+            minimalModeToggle.addEventListener('click', () => {
+                isMinimalMode = !isMinimalMode;
+                
+                if (isMinimalMode) {
+                    // 进入极简模式：隐藏所有板块，背景blur效果逐渐消失
+                    contentSections.forEach(section => {
+                        section.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                        section.style.opacity = '0';
+                        section.style.transform = 'translateY(20px)';
+                        section.style.pointerEvents = 'none';
+                    });
+                    
+                    // 移除背景模糊效果
+                    if (bgImage) {
+                        bgImage.style.transition = 'filter 0.5s ease';
+                        bgImage.style.filter = 'blur(0px)';
+                    }
+                    
+                    // 给极简模式按钮添加激活样式
+                    minimalModeToggle.classList.add('bg-primary/20', 'dark:bg-primary-dark/20');
+                    minimalModeToggle.querySelector('i').classList.add('text-primary', 'dark:text-primary-dark');
+                } else {
+                    // 退出极简模式：显示所有板块，恢复背景blur效果
+                    contentSections.forEach(section => {
+                        section.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                        section.style.opacity = '1';
+                        section.style.transform = 'translateY(0)';
+                        section.style.pointerEvents = 'auto';
+                    });
+                    
+                    // 恢复背景模糊效果
+                    if (bgImage) {
+                        bgImage.style.transition = 'filter 0.5s ease';
+                        bgImage.style.filter = 'blur(4px)';
+                    }
+                    
+                    // 移除极简模式按钮的激活样式
+                    minimalModeToggle.classList.remove('bg-primary/20', 'dark:bg-primary-dark/20');
+                    minimalModeToggle.querySelector('i').classList.remove('text-primary', 'dark:text-primary-dark');
+                }
+            });
+            
+            // 活动图表
+            const ctx = document.getElementById('activityChart');
+            if (ctx) {
+                const isDark = htmlElement.classList.contains('dark');
+                const textColor = isDark ? '#9CA3AF' : '#4B5563';
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+                        datasets: [{
+                            label: '代码提交',
+                            data: [3, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            borderColor: isDark ? '#a855f7' : '#6a11cb',
+                            backgroundColor: isDark ? 'rgba(168, 85, 247, 0.1)' : 'rgba(106, 17, 203, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                                },
+                                ticks: {
+                                    color: textColor
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: textColor
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 添加页面滚动动画
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate-fade-in');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            document.querySelectorAll('.card-hover:not(.animate-fade-in)').forEach(card => {
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>
