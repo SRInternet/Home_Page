@@ -23,7 +23,7 @@
 - **前端**：HTML5, Tailwind CSS, JavaScript
 - **数据可视化**：Chart.js
 - **第三方集成**：GitHub API
-- **部署选项**：GitHub Pages, Vercel, Netlify, PythonAnywhere, Heroku 等
+- **部署选项**：GitHub Pages, Vercel, Netlify, PythonAnywhere, Heroku, Docker 等
 
 ## 📋 前提条件
 
@@ -31,6 +31,7 @@
 - Git 版本控制系统
 - GitHub 账号（可选，用于展示 GitHub 信息）
 - 推荐使用虚拟环境进行开发
+- Docker（可选，用于容器化部署）
 
 ## 🚀 快速开始
 
@@ -122,6 +123,44 @@ git push origin master:gh-pages
 - Heroku
 - Railway
 - DigitalOcean App Platform
+
+### 方法四：使用 Docker 部署
+
+#### 使用 Docker CLI
+
+1. **构建 Docker 镜像**：
+   ```bash
+   docker build -t home-page .
+   ```
+
+2. **运行容器**：
+   ```bash
+   docker run -p 5000:5000 home-page
+   ```
+
+#### 使用 Docker Compose
+
+1. **启动服务**：
+   ```bash
+   docker-compose up
+   ```
+
+2. **后台运行**：
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **查看日志**：
+   ```bash
+   docker-compose logs
+   ```
+
+4. **停止服务**：
+   ```bash
+   docker-compose down
+   ```
+
+访问 http://localhost:5000 查看应用。
 
 ## 💻 命令行工具
 
