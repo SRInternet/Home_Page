@@ -1,5 +1,5 @@
-# 使用 Python 3.9 轻量级镜像
-FROM python:3.9-slim
+# 使用 Python 3.10 轻量级镜像
+FROM python:3.10-slim
 
 # 设置环境变量
 ENV PYTHONDONTWRITEBYTECODE=1 \
