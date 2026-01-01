@@ -186,13 +186,35 @@ bash deploy.sh help
 
 ## 🤖 自动编译配置
 
-项目支持配置 GitHub Actions 自动编译功能，主要特点：
+项目支持配置 GitHub Actions 自动编译功能，提供两种自动构建方式：
 
+### 静态文件自动构建
 - 每天 UTC 时间 0 点（北京时间 8 点）自动运行编译脚本
 - 自动将生成的静态文件提交到当前分支
 - 支持在 GitHub 仓库的 Actions 页面手动触发运行
 
 GitHub Actions 配置文件可参考[个人项目主页](https://github.com/SRInternet/SRInternet.github.io/blob/master/.github/workflows/build-deploy.yml)
+
+### Docker 镜像自动构建和推送
+当您推送 Git 标签（tag）时，自动触发 Docker 镜像构建并推送到 GitHub Container Registry (GHCR)。
+
+**功能特点：**
+- 自动构建 Docker 镜像
+- 推送镜像到 GHCR，使用小写用户名确保兼容性
+- 镜像标签与 Git 标签一致
+- 同时推送 `latest` 标签
+
+**使用方法：**
+1. 创建并推送一个 Git 标签：
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+2. 工作流自动执行，构建镜像并推送到 `ghcr.io/<您的用户名>/home-page:v1.0.0`
+
+**镜像名称格式：** `ghcr.io/<owner>/<repo>:<tag>`
+
+工作流配置文件位于 `.github/workflows/docker-build-push.yml`
 
 ## ⚙️ 配置详解
 

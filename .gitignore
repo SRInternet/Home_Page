@@ -64,6 +64,5 @@ config_gmunitx.json
 static_build/
 static_build1/
 
-# 不需要workflows目录
-.github/workflows/
+# 工作流文件已提交到版本控制
 index.html
