@@ -23,7 +23,7 @@
 - **前端**：HTML5, Tailwind CSS, JavaScript
 - **数据可视化**：Chart.js
 - **第三方集成**：GitHub API
-- **部署选项**：GitHub Pages, Vercel, Netlify, PythonAnywhere, Heroku 等
+- **部署选项**：GitHub Pages, Vercel, Netlify, PythonAnywhere, Heroku, Docker 等
 
 ## 📋 前提条件
 
@@ -31,6 +31,7 @@
 - Git 版本控制系统
 - GitHub 账号（可选，用于展示 GitHub 信息）
 - 推荐使用虚拟环境进行开发
+- Docker（可选，用于容器化部署）
 
 ## 🚀 快速开始
 
@@ -123,6 +124,44 @@ git push origin master:gh-pages
 - Railway
 - DigitalOcean App Platform
 
+### 方法四：使用 Docker 部署
+
+#### 使用 Docker CLI
+
+1. **构建 Docker 镜像**：
+   ```bash
+   docker build -t home-page .
+   ```
+
+2. **运行容器**：
+   ```bash
+   docker run -p 5000:5000 home-page
+   ```
+
+#### 使用 Docker Compose
+
+1. **启动服务**：
+   ```bash
+   docker-compose up
+   ```
+
+2. **后台运行**：
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **查看日志**：
+   ```bash
+   docker-compose logs
+   ```
+
+4. **停止服务**：
+   ```bash
+   docker-compose down
+   ```
+
+访问 http://localhost:5000 查看应用。
+
 ## 💻 命令行工具
 
 项目提供了便捷的命令行工具 `deploy.sh` 来管理项目：
@@ -147,13 +186,36 @@ bash deploy.sh help
 
 ## 🤖 自动编译配置
 
-项目支持配置 GitHub Actions 自动编译功能，主要特点：
+项目支持配置 GitHub Actions 自动编译功能，提供两种自动构建方式：
 
+### 静态文件自动构建
 - 每天 UTC 时间 0 点（北京时间 8 点）自动运行编译脚本
 - 自动将生成的静态文件提交到当前分支
 - 支持在 GitHub 仓库的 Actions 页面手动触发运行
 
 GitHub Actions 配置文件可参考[个人项目主页](https://github.com/SRInternet/SRInternet.github.io/blob/master/.github/workflows/build-deploy.yml)
+
+### Docker 镜像自动构建和推送
+当您推送 Git 标签（tag）时，自动触发 Docker 镜像构建并推送到 GitHub Container Registry (GHCR)。
+
+**功能特点：**
+- 自动构建 Docker 镜像
+- 推送镜像到 GHCR，使用小写用户名确保兼容性
+- 镜像标签与 Git 标签一致
+- 同时推送 `latest` 标签
+
+**使用方法：**
+1. 创建并推送一个 Git 标签：
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+2. 工作流自动执行，构建镜像并推送到 `ghcr.io/<您的用户名>/<仓库名>:<标签>`
+   - 例如：如果您的仓库名为 `Home_Page`，标签为 `v1.0.0`，镜像将推送到 `ghcr.io/<您的用户名>/home_page:v1.0.0`
+
+**镜像名称格式：** `ghcr.io/<owner>/<repository-name>:<tag>`
+
+工作流配置文件位于 `.github/workflows/docker-build-push.yml`
 
 ## ⚙️ 配置详解
 

@@ -1,4 +1,4 @@
-/sln# Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -64,5 +64,13 @@ config_gmunitx.json
 static_build/
 static_build1/
 
-# 工作流文件已提交到版本控制
-index.html
+# 不需要workflows目录
+.github/workflows/
+
+# Docker 相关文件
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 本地开发文件
+config.json  # 将在容器内生成

@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  home-page:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+    restart: unless-stopped
+    # 如果需要持久化配置，可以挂载卷：
+    # volumes:
+    #   - ./config.json:/app/config.json:rw
+    #   - ./default:/app/default:ro
+    #   - ./templates:/app/templates:ro
