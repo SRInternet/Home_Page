@@ -593,8 +593,17 @@ def get_readme_content(username):
         
         if readme_response.status_code == 200:
             print("成功获取main分支的README")
-            # 将 Markdown 转换为 HTML
-            return markdown.markdown(readme_response.text)
+            # 将 Markdown 转换为 HTML 使用扩展
+            return markdown.markdown(
+                readme_response.text,
+                extensions=['extra', 'codehilite', 'toc', 'tables', 'md_in_html'],
+                extension_configs={
+                    'codehilite': {
+                        'css_class': 'highlight',
+                        'linenums': False
+                    }
+                }
+            )
         
         # 尝试其他分支（master）
         readme_url_master = f'https://raw.githubusercontent.com/{username}/{username}/master/README.md'
@@ -604,7 +613,16 @@ def get_readme_content(username):
         
         if readme_response.status_code == 200:
             print("成功获取master分支的README")
-            return markdown.markdown(readme_response.text)
+            return markdown.markdown(
+                readme_response.text,
+                extensions=['extra', 'codehilite', 'toc', 'tables', 'md_in_html'],
+                extension_configs={
+                    'codehilite': {
+                        'css_class': 'highlight',
+                        'linenums': False
+                    }
+                }
+            )
         
         print(f"GitHub README获取失败，状态码: {readme_response.status_code}")
     except Exception as e:
@@ -620,7 +638,18 @@ def get_local_readme():
         introduction_file = config.get('introduction_file', 'Introduction.md')
         if os.path.exists(introduction_file):
             with open(introduction_file, 'r', encoding='utf-8') as f:
-                return markdown.markdown(f.read())
+                # 使用多个扩展来增强 Markdown 转换
+                md_text = f.read()
+                return markdown.markdown(
+                    md_text,
+                    extensions=['extra', 'codehilite', 'toc', 'tables', 'md_in_html'],
+                    extension_configs={
+                        'codehilite': {
+                            'css_class': 'highlight',
+                            'linenums': False
+                        }
+                    }
+                )
     except Exception:
         pass
     

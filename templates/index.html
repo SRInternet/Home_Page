@@ -27,6 +27,129 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- Tailwind Typography Plugin -->
+    <script>
+        // 应用 Markdown 样式的函数
+        function applyMarkdownStyles() {
+            const readmeContent = document.getElementById('readme-content');
+            if (readmeContent) {
+                const h1Elements = readmeContent.querySelectorAll('h1');
+                const h2Elements = readmeContent.querySelectorAll('h2');
+                const h3Elements = readmeContent.querySelectorAll('h3');
+                const h4Elements = readmeContent.querySelectorAll('h4');
+                const pElements = readmeContent.querySelectorAll('p');
+                const ulElements = readmeContent.querySelectorAll('ul');
+                const olElements = readmeContent.querySelectorAll('ol');
+                const liElements = readmeContent.querySelectorAll('li');
+                const codeElements = readmeContent.querySelectorAll('code');
+                const preElements = readmeContent.querySelectorAll('pre');
+                const aElements = readmeContent.querySelectorAll('a');
+                const imgElements = readmeContent.querySelectorAll('img');
+                const blockquoteElements = readmeContent.querySelectorAll('blockquote');
+                const hrElements = readmeContent.querySelectorAll('hr');
+                const tableElements = readmeContent.querySelectorAll('table');
+                
+                h1Elements.forEach(el => {
+                    if (!el.className.includes('font-bold')) {
+                        el.className = 'text-4xl font-bold mt-8 mb-4 text-gray-900 dark:text-white border-b pb-3 border-gray-300 dark:border-gray-700';
+                    }
+                });
+                h2Elements.forEach(el => {
+                    if (!el.className.includes('font-bold')) {
+                        el.className = 'text-3xl font-bold mt-6 mb-3 text-gray-900 dark:text-white border-b pb-2 border-gray-300 dark:border-gray-700';
+                    }
+                });
+                h3Elements.forEach(el => {
+                    if (!el.className.includes('font-bold')) {
+                        el.className = 'text-2xl font-bold mt-5 mb-2 text-gray-900 dark:text-white';
+                    }
+                });
+                h4Elements.forEach(el => {
+                    if (!el.className.includes('font-bold')) {
+                        el.className = 'text-xl font-bold mt-4 mb-2 text-gray-900 dark:text-white';
+                    }
+                });
+                pElements.forEach(el => {
+                    if (!el.className.includes('text-gray')) {
+                        el.className = 'mb-4 text-gray-700 dark:text-gray-300 leading-relaxed';
+                    }
+                });
+                ulElements.forEach(el => {
+                    if (!el.className.includes('list-disc')) {
+                        el.className = 'list-disc list-inside mb-4 ml-4 text-gray-700 dark:text-gray-300 space-y-1';
+                    }
+                });
+                olElements.forEach(el => {
+                    if (!el.className.includes('list-decimal')) {
+                        el.className = 'list-decimal list-inside mb-4 ml-4 text-gray-700 dark:text-gray-300 space-y-1';
+                    }
+                });
+                liElements.forEach(el => {
+                    if (!el.className.includes('mb')) {
+                        el.className = 'mb-1';
+                    }
+                });
+                codeElements.forEach(el => {
+                    if (el.parentElement.tagName !== 'PRE' && !el.className.includes('bg-gray')) {
+                        el.className = 'bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-red-600 dark:text-red-400 font-mono text-sm break-words';
+                    }
+                });
+                preElements.forEach(el => {
+                    if (!el.className.includes('bg-gray-900')) {
+                        el.className = 'bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4 text-sm';
+                    }
+                });
+                aElements.forEach(el => {
+                    if (!el.className.includes('text-blue')) {
+                        el.className = 'text-blue-600 dark:text-blue-400 hover:underline font-semibold';
+                    }
+                });
+                imgElements.forEach(el => {
+                    if (!el.className.includes('max-w-full')) {
+                        el.className = 'max-w-full h-auto rounded-lg my-4 shadow-lg';
+                    }
+                });
+                blockquoteElements.forEach(el => {
+                    if (!el.className.includes('border-l')) {
+                        el.className = 'border-l-4 border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 pl-4 py-2 my-4 text-gray-700 dark:text-gray-300 italic';
+                    }
+                });
+                hrElements.forEach(el => {
+                    if (!el.className.includes('border')) {
+                        el.className = 'my-6 border-t border-gray-300 dark:border-gray-700';
+                    }
+                });
+                tableElements.forEach(el => {
+                    if (!el.className.includes('min-w-full')) {
+                        el.className = 'min-w-full border-collapse border border-gray-300 dark:border-gray-700 my-4';
+                    }
+                });
+                
+                // 为 table 的 th 和 td 添加样式
+                const thElements = readmeContent.querySelectorAll('th');
+                const tdElements = readmeContent.querySelectorAll('td');
+                
+                thElements.forEach(el => {
+                    if (!el.className.includes('bg')) {
+                        el.className = 'bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-4 py-2 font-semibold text-gray-900 dark:text-white text-left';
+                    }
+                });
+                
+                tdElements.forEach(el => {
+                    if (!el.className.includes('border')) {
+                        el.className = 'border border-gray-300 dark:border-gray-700 px-4 py-2 text-gray-700 dark:text-gray-300';
+                    }
+                });
+            }
+        }
+        
+        // 在 DOM 加载完成后立即应用样式
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyMarkdownStyles);
+        } else {
+            applyMarkdownStyles();
+        }
+    </script>
     <!-- 配置 Tailwind -->
     <script>
         tailwind.config = {
@@ -367,7 +490,7 @@
                         <i class="fa-solid fa-file-lines text-primary dark:text-primary-dark mr-2"></i>
                         个人介绍
                     </h2>
-                    <div class="prose dark:prose-invert max-w-none" id="readme-content">
+                    <div class="max-w-none" id="readme-content">
                         {{ github_info.readme_content|safe }}
                     </div>
                 </div>
