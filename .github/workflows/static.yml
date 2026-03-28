@@ -1,0 +1,60 @@
+# GitHub Actions workflow for building and deploying to GitHub Pages
+name: Build and Deploy to GitHub Pages
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+  push:
+    branches: ['main', 'master']
+
+# 修复：完整正确的权限
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  actions: read
+  deployments: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      # 安装 uv 并极速安装依赖（替换 pip）
+      - name: Install dependencies with uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv pip install --system -r requirements.txt
+
+      - name: Generate static files
+        run: python build_static.py
+
+      - name: Prepare output directory
+        run: mkdir -p output && cp index.html background.jpg output/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './output'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
