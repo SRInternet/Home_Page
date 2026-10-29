@@ -25,6 +25,8 @@ Flask 单页应用，渲染 `templates/index.html`，数据来自 GitHub API。�
 - 所有 GitHub 请求必须经 `make_github_request()`：全局禁用 SSL 校验、5s 超时、异常返回 `MockResponse(status_code=500)`，禁止裸用 `requests.get`。
 - GitHub token 优先级：`app.root_path/github_token.txt`（在 `.gitignore` 中）> `config.json` 的 `github_token`。
 - 令牌只注入 `TOKEN_HOSTS`（`api.github.com`）内的 URL，避免外发到 `raw.githubusercontent.com` 等 CDN 域名。
+- 令牌来源优先级：环境变量 `GITHUB_TOKEN` > `github_token.txt` > `config.json` 的 `github_token`。前两者都在 `.gitignore` 中，CI 检出后不存在，因此 workflow 必须显式传 `secrets.GITHUB_TOKEN`，否则 GraphQL 贡献日历直接放弃、REST 回退在匿名下命中 403，最终返回全零。
+- 取不到活动/star 数据时返回全零而非编造数值：假数据会让采集故障被静默掩盖（本地有 token 正常、CI 无 token 显示一组看似合理的曲线）。
 - `config.json` 缺失、损坏或顶层非对象时，依次回退 `default/default_config.json` → `BUILTIN_CONFIG`，并按 `BUILTIN_CONFIG` 补齐 `theme`/`background`/`contact` 缺失键；模块级 `config = {}` 保证 `import app` 不会 NameError。
 - 模板内 `tech_stack`/`activity_data` 的颜色与数值由 Python 端预计算（`analyze_tech_stack` 带 1 小时模块级缓存），前端只消费；图表数据用 `{{ github_info.activity_data | tojson }}` 注入。
 - `Introduction.md` 的渲染链路是：GitHub 同名仓库 README（main→master）失败时回退本地 `config['introduction_file']` 指定文件，Markdown 用固定扩展集转换。

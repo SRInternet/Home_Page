@@ -84,11 +84,16 @@ def load_config():
 
 # 读取 GitHub 令牌
 def get_github_token():
+    env_token = os.environ.get('GITHUB_TOKEN', '').strip()
+    if env_token:
+        return env_token
     token_file = os.path.join(app.root_path, 'github_token.txt')
     if os.path.exists(token_file):
         try:
             with open(token_file, 'r', encoding='utf-8') as f:
-                return f.read().strip().replace('"', '').replace("'", '')
+                token = f.read().strip().replace('"', '').replace("'", '')
+                if token:
+                    return token
         except Exception as e:
             print(f"读取GitHub令牌时出错: {e}")
     return config.get('github_token', '')
@@ -293,9 +298,9 @@ def get_github_user_info():
         "total_stars": 0,
         "readme_content": get_local_readme(),
         "recent_repos": [],
-        "activity_data": [65, 59, 80, 81, 56, 55, 70, 65, 85, 75, 60, 75],  # 默认数据
+        "activity_data": [0] * 12,
         "activity_labels": _activity_month_labels(datetime.now()),
-        "star_data": [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65],  # 默认数据
+        "star_data": [0] * 12,
         "star_labels": _activity_month_labels(datetime.now()),
         "organizations": [],
         "tech_stack": [
@@ -346,7 +351,7 @@ def _activity_window_start(now):
 # Star 增长历史
 def get_github_star_history(username, repos=None):
     """返回 (star_data, star_labels)：最近 12 个自然月的累计 star 总量。"""
-    default_data = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]
+    default_data = [0] * 12
 
     try:
         print(f"开始获取GitHub Star增长数据: {username}")
@@ -520,7 +525,8 @@ def get_github_contribution_months(username, token=''):
 
 def get_github_activity_data(username, repos=None):
     """返回 (activity_data, activity_labels)。"""
-    default_data = [65, 59, 80, 81, 56, 55, 70, 65, 85, 75, 60, 75]
+    # 取不到数据时返回全零
+    default_data = [0] * 12
 
     try:
         print(f"开始获取GitHub活动数据: {username}")
@@ -532,7 +538,12 @@ def get_github_activity_data(username, repos=None):
         earliest_date = window_start
 
         # 1. 优先使用 GraphQL 官方贡献日历，口径与 GitHub 个人主页一致
-        counts, gql_labels = get_github_contribution_months(username, get_github_token())
+        token = get_github_token()
+        if not token:
+            print("未配置 GITHUB_TOKEN，贡献日历不可用；REST 回退只能覆盖近 90 天，"
+                  "结果会显著低于官方数据")
+
+        counts, gql_labels = get_github_contribution_months(username, token)
         if counts is not None and sum(counts) > 0:
             return counts[::-1], gql_labels
 

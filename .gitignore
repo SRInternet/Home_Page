@@ -74,3 +74,6 @@ index.html
 
 # 本地临时目录
 .tmp/
+
+# 临时被忽略的文件
+.github/
