@@ -1,5 +1,6 @@
-# 忽略虚拟环境
+# 忽略虚拟环境（两种常见命名都排除）
 .venv/
+venv/
 
 # 忽略版本控制文件
 .git/
@@ -9,6 +10,7 @@
 # 忽略构建产物
 *.pyc
 __pycache__/
+static_build/
 
 # 忽略IDE配置文件
 .idea/
@@ -24,6 +26,14 @@ logs/
 # 忽略敏感信息文件
 .env
 *.env
+github_token.txt
+config.json
+
+# 忽略本地临时目录与 IDE 注入文件
+.tmp/
+.roo/
+*.bak
+*.log
 
 # 忽略临时文件
 *.tmp

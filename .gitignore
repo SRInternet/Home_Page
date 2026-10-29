@@ -56,9 +56,10 @@ home/
 
 # 不需要的图片文件
 1background.jpg
+background.jpg
 
 # 特定配置文件
-config_gmunitx.json
+config.json
 
 # 旧的静态构建目录
 static_build/
@@ -67,3 +68,9 @@ static_build1/
 # 不需要workflows目录
 .github/workflows/
 index.html
+
+# IDE 注入的规则文件
+.roo/
+
+# 本地临时目录
+.tmp/

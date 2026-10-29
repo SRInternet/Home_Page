@@ -201,9 +201,12 @@
             .card-hover {
                 transition: all 0.3s ease;
             }
-            .card-hover:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            /* 位移类悬停效果只在支持悬停的设备上生效 */
+            @media (hover: hover) and (pointer: fine) {
+                .card-hover:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                }
             }
             /* 云母效果和边框光效 */
             .glass-panel {
@@ -214,6 +217,9 @@
                 box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
                 position: relative;
                 overflow: hidden;
+                /* 不在此处声明 transform，避免压过同层的 .card-hover:hover */
+                transition: opacity 0.5s ease,
+                            transform 0.5s ease;
             }
             .glass-panel::after {
                 content: '';
@@ -336,6 +342,7 @@
                 box-shadow: 0 0 20px rgba(106, 17, 203, 0.8);
             }
         }
+        /* 通用入场：由下往上淡入 */
         .animate-fade-in {
             animation: fadeIn 0.8s ease-in;
         }
@@ -343,8 +350,20 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* 个人介绍板块沿用右侧切入；写在 .animate-fade-in 之后以覆盖通用入场 */
         .readme-content {
             animation: slideIn 0.8s ease-out;
+            /* 播完不保留关键帧值 */
+            animation-fill-mode: none;
+        }
+        .readme-content.animate-fade-in {
+            animation: slideIn 0.8s ease-out;
+            animation-fill-mode: none;
+        }
+        /* 入场动画播完后由 JS 补上，显式关掉 animation */
+        .animate-fade-in.entrance-done,
+        .readme-content.entrance-done {
+            animation: none;
         }
         @keyframes slideIn {
             from { opacity: 0; transform: translateX(20px); }
@@ -353,11 +372,83 @@
         .repo-item {
             transition: all 0.3s ease;
         }
-        .repo-item:hover {
-            transform: translateX(5px);
+        /* 同上：位移类悬停效果只在支持悬停的设备上生效 */
+        @media (hover: hover) and (pointer: fine) {
+            .repo-item:hover {
+                transform: translateX(5px);
+            }
         }
         .tech-icon {
             filter: drop-shadow(0 0 5px rgba(106, 17, 203, 0.5));
+        }
+
+        /* 主题切换按钮：任意时刻只显示当前模式对应的一个图标 */
+        .theme-icon-light {
+            display: inline-block;
+        }
+        .theme-icon-dark {
+            display: none;
+        }
+        .dark .theme-icon-light {
+            display: none;
+        }
+        .dark .theme-icon-dark {
+            display: inline-block;
+        }
+
+        /* 极简模式：板块退场时淡出、下移并减弱模糊 */
+        .glass-panel.section-hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+        }
+        .bg-image {
+            transition: filter 0.5s ease;
+        }
+
+        /* 贡献图表配色，深浅两套由 JS 读取 */
+        :root {
+            --chart-line: {{ config.theme.primary_color }};
+            --chart-fill: {{ config.theme.primary_color }}1A;
+            --chart-bar: {{ config.theme.secondary_color }};
+            --chart-bar-fill: {{ config.theme.secondary_color }}33;
+            --chart-grid: rgba(0, 0, 0, 0.1);
+            --chart-text: #4B5563;
+            --chart-tooltip-bg: rgba(255, 255, 255, 0.95);
+            --chart-tooltip-text: #1F2937;
+        }
+        .dark {
+            --chart-line: {{ config.theme.dark_primary_color }};
+            --chart-fill: {{ config.theme.dark_primary_color }}1A;
+            --chart-bar: {{ config.theme.dark_secondary_color }};
+            --chart-bar-fill: {{ config.theme.dark_secondary_color }}33;
+            --chart-grid: rgba(255, 255, 255, 0.1);
+            --chart-text: #9CA3AF;
+            --chart-tooltip-bg: rgba(17, 24, 39, 0.95);
+            --chart-tooltip-text: #F3F4F6;
+        }
+
+        /* 深浅色切换涟漪（View Transitions） */
+        :root {
+            --ripple-duration: 0.6s;
+        }
+        ::view-transition-old(root) {
+            animation: none;
+        }
+        ::view-transition-new(root) {
+            animation: theme-ripple-expand var(--ripple-duration) ease-in-out both;
+        }
+        @keyframes theme-ripple-expand {
+            from { clip-path: circle(0 at var(--ripple-x, 50%) var(--ripple-y, 50%)); }
+            to   { clip-path: circle(150% at var(--ripple-x, 50%) var(--ripple-y, 50%)); }
+        }
+        /* 动效偏好降级：JS 侧已跳过 VT，这里兜底关掉已启动的过渡 */
+        @media (prefers-reduced-motion: reduce) {
+            ::view-transition-old(root),
+            ::view-transition-new(root) {
+                animation: none;
+            }
         }
     </style>
 </head>
@@ -390,9 +481,11 @@
                 </button>
                 
                 <!-- 深色模式切换 -->
+                <!-- 用显式的 theme-icon / dark 作用域类控制显隐，避免两个图标同时渲染 -->
                 <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <i class="fa-solid fa-moon dark:hidden text-gray-700"></i>
-                    <i class="fa-solid fa-sun hidden dark:block text-yellow-400"></i>
+                    <span class="sr-only">切换深浅色模式</span>
+                    <i class="fa-solid fa-moon theme-icon-light text-gray-700 dark:text-gray-300"></i>
+                    <i class="fa-solid fa-sun theme-icon-dark text-yellow-400"></i>
                 </button>
                 <a href="{{ config.github_url }}" target="_blank" rel="noopener noreferrer" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     <i class="fa-brands fa-github text-xl"></i>
@@ -480,12 +573,60 @@
                         <canvas id="activityChart"></canvas>
                     </div>
                 </div>
+
+                <!-- Star 增长图表 -->
+                <div class="glass-panel bg-white/30 dark:bg-gray-800/30 rounded-2xl shadow-xl p-6 mt-6 card-hover animate-fade-in" style="animation-delay: 0.3s;">
+                    <h3 class="text-lg font-semibold mb-3">Star 增长</h3>
+                    <div class="h-64">
+                        <canvas id="starChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 组织列表 -->
+                <div class="glass-panel bg-white/30 dark:bg-gray-800/30 rounded-2xl shadow-xl p-6 mt-6 card-hover animate-fade-in" style="animation-delay: 0.4s;">
+                    <h3 class="text-lg font-semibold mb-3">所属组织</h3>
+                    {% if github_info.organizations %}
+                    <ul class="space-y-3">
+                        {% for org in github_info.organizations %}
+                        <li class="flex items-center gap-3">
+                            <img
+                                src="{{ org.avatar_url }}"
+                                alt="{{ org.login }}"
+                                loading="lazy"
+                                class="w-10 h-10 rounded-full border-2 border-white dark:border-gray-700 shadow-sm flex-shrink-0"
+                            >
+                            <a
+                                href="{{ org.url }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary-dark transition-colors truncate"
+                            >
+                                {{ org.login }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="py-6 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fa-solid fa-users text-4xl mb-3"></i>
+                        <p>暂未加入任何组织或未公开身份</p>
+                        <a
+                            href="https://docs.github.com/en/account-and-profile/how-tos/organization-membership/publicizing-or-hiding-organization-membership"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="mt-2 inline-block text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                            如何设置我的公开身份
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
 
             <!-- 右侧内容区域 -->
             <div class="lg:col-span-2">
                 <!-- README 内容 -->
-                <div class="glass-panel bg-white/30 dark:bg-gray-800/30 rounded-2xl shadow-xl p-6 readme-content">
+                <div class="glass-panel bg-white/30 dark:bg-gray-800/30 rounded-2xl shadow-xl p-6 card-hover readme-content">
                     <h2 class="text-2xl font-bold mb-4 flex items-center">
                         <i class="fa-solid fa-file-lines text-primary dark:text-primary-dark mr-2"></i>
                         个人介绍
@@ -587,10 +728,44 @@
                 htmlElement.classList.add('dark');
             }
             
-            // 主题切换事件
-            themeToggle.addEventListener('click', function() {
-                htmlElement.classList.toggle('dark');
-                localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
+            // 切换深浅色类名并写入 localStorage
+            const applyTheme = function() {
+                const isDark = htmlElement.classList.toggle('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            };
+            
+            // 主题切换：由按钮发起自点击点向外扩散的涟漪
+            let themeRippleRunning = false;
+            themeToggle.addEventListener('click', function(event) {
+                const canRipple = typeof document.startViewTransition === 'function'
+                    && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                    && !document.hidden;
+
+                if (!canRipple || themeRippleRunning) {
+                    applyTheme();
+                    return;
+                }
+
+                // 指针坐标优先；键盘触发（Enter/Space）时 clientX/Y 为 0，退回按钮中心
+                const rect = themeToggle.getBoundingClientRect();
+                const originX = event.clientX || (rect.left + rect.width / 2);
+                const originY = event.clientY || (rect.top + rect.height / 2);
+                htmlElement.style.setProperty('--ripple-x', originX + 'px');
+                htmlElement.style.setProperty('--ripple-y', originY + 'px');
+
+                themeRippleRunning = true;
+                let transition;
+                try {
+                    transition = document.startViewTransition(applyTheme);
+                } catch (e) {
+                    // 过渡启动失败时退回直接切换
+                    themeRippleRunning = false;
+                    applyTheme();
+                    return;
+                }
+                const unlock = function() { themeRippleRunning = false; };
+                transition.ready.catch(function() {});
+                transition.finished.then(unlock, unlock);
             });
             
             // 监听系统主题变化
@@ -602,120 +777,223 @@
             
             /* 极简模式功能 */
             const minimalModeToggle = document.getElementById('minimal-mode-toggle');
-            // 修改选择器，包含所有板块，修复转义字符
-            const contentSections = document.querySelectorAll('div.lg\\:col-span-1, div.lg\\:col-span-2 > div');
+            // 选中板块本体：.section-hidden 挂在 .glass-panel 上
+            const contentSections = document.querySelectorAll('.glass-panel');
             const bgImage = document.querySelector('.bg-image');
             let isMinimalMode = false;
             
             // 极简模式切换事件处理
             minimalModeToggle.addEventListener('click', () => {
                 isMinimalMode = !isMinimalMode;
-                
+
+                contentSections.forEach(section => {
+                    section.classList.toggle('section-hidden', isMinimalMode);
+                    section.style.pointerEvents = isMinimalMode ? 'none' : 'auto';
+                });
+
+                // 移除背景模糊效果
+                if (bgImage) {
+                    bgImage.style.filter = isMinimalMode ? 'blur(0px)' : 'blur({{ config.background.blur }}px)';
+                }
+
                 if (isMinimalMode) {
-                    // 进入极简模式：隐藏所有板块，背景blur效果逐渐消失
-                    contentSections.forEach(section => {
-                        section.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                        section.style.opacity = '0';
-                        section.style.transform = 'translateY(20px)';
-                        section.style.pointerEvents = 'none';
-                    });
-                    
-                    // 移除背景模糊效果
-                    if (bgImage) {
-                        bgImage.style.transition = 'filter 0.5s ease';
-                        bgImage.style.filter = 'blur(0px)';
-                    }
-                    
                     // 给极简模式按钮添加激活样式
                     minimalModeToggle.classList.add('bg-primary/20', 'dark:bg-primary-dark/20');
                     minimalModeToggle.querySelector('i').classList.add('text-primary', 'dark:text-primary-dark');
                 } else {
-                    // 退出极简模式：显示所有板块，恢复背景blur效果
-                    contentSections.forEach(section => {
-                        section.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                        section.style.opacity = '1';
-                        section.style.transform = 'translateY(0)';
-                        section.style.pointerEvents = 'auto';
-                    });
-                    
-                    // 恢复背景模糊效果
-                    if (bgImage) {
-                        bgImage.style.transition = 'filter 0.5s ease';
-                        bgImage.style.filter = 'blur({{ config.background.blur }}px)';
-                    }
-                    
                     // 移除极简模式按钮的激活样式
                     minimalModeToggle.classList.remove('bg-primary/20', 'dark:bg-primary-dark/20');
                     minimalModeToggle.querySelector('i').classList.remove('text-primary', 'dark:text-primary-dark');
                 }
             });
             
-            // 活动图表
-            const ctx = document.getElementById('activityChart');
-            if (ctx) {
-                const isDark = htmlElement.classList.contains('dark');
-                const textColor = isDark ? '#9CA3AF' : '#4B5563';
-                
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
-                        datasets: [{
-                            label: '代码提交',
-                            data: {{ github_info.activity_data | tojson }},
-                            borderColor: isDark ? '{{ config.theme.dark_primary_color }}' : '{{ config.theme.primary_color }}',
-                            backgroundColor: isDark ? 'rgba(168, 85, 247, 0.1)' : 'rgba(106, 17, 203, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }]
+            // 图表体系
+            const readChartTheme = () => {
+                const styles = getComputedStyle(document.documentElement);
+                return {
+                    line: styles.getPropertyValue('--chart-line').trim(),
+                    fill: styles.getPropertyValue('--chart-fill').trim(),
+                    bar: styles.getPropertyValue('--chart-bar').trim(),
+                    barFill: styles.getPropertyValue('--chart-bar-fill').trim(),
+                    grid: styles.getPropertyValue('--chart-grid').trim(),
+                    text: styles.getPropertyValue('--chart-text').trim(),
+                    tooltipBg: styles.getPropertyValue('--chart-tooltip-bg').trim(),
+                    tooltipText: styles.getPropertyValue('--chart-tooltip-text').trim()
+                };
+            };
+
+            // 坐标轴与提示框样式由两个图表共用
+            const buildChartOptions = (theme) => ({
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false
-                            }
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: theme.tooltipBg,
+                        titleColor: theme.tooltipText,
+                        bodyColor: theme.tooltipText,
+                        borderColor: theme.grid,
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: theme.grid
                         },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                                },
-                                ticks: {
-                                    color: textColor
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    display: false
-                                },
-                                ticks: {
-                                    color: textColor
-                                }
-                            }
+                        ticks: {
+                            color: theme.text
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: theme.text
                         }
                     }
-                });
-            }
-            
-            // 添加页面滚动动画
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('animate-fade-in');
-                        observer.unobserve(entry.target);
+                }
+            });
+
+            // 每项：{ canvasId, type, labels, data, label, seriesKey }
+            const chartSpecs = [
+                {
+                    canvasId: 'activityChart',
+                    type: 'line',
+                    labels: {{ github_info.activity_labels | tojson }},
+                    data: {{ github_info.activity_data | tojson }},
+                    label: '代码提交',
+                    seriesKey: 'line'
+                },
+                {
+                    canvasId: 'starChart',
+                    type: 'bar',
+                    labels: {{ github_info.star_labels | tojson }},
+                    data: {{ github_info.star_data | tojson }},
+                    label: '累计 Star',
+                    seriesKey: 'bar'
+                }
+            ];
+
+            const buildChartConfig = (spec) => {
+                const theme = readChartTheme();
+                const isBar = spec.seriesKey === 'bar';
+                return {
+                    type: spec.type,
+                    data: {
+                        labels: spec.labels,
+                        datasets: [{
+                            label: spec.label,
+                            data: spec.data,
+                            // 折线图用 line/fill，柱状图用 bar/barFill
+                            borderColor: isBar ? theme.bar : theme.line,
+                            backgroundColor: isBar ? theme.barFill : theme.fill,
+                            tension: 0.4,
+                            fill: !isBar,
+                            pointBackgroundColor: theme.line,
+                            pointBorderColor: theme.line,
+                            borderRadius: isBar ? 4 : undefined,
+                            borderWidth: isBar ? 1 : 2
+                        }]
+                    },
+                    options: buildChartOptions(theme)
+                };
+            };
+
+            // 保存每个 canvas 的实例，主题切换时统一销毁重建
+            const chartInstances = new Map();
+
+            const initCharts = () => {
+                for (const spec of chartSpecs) {
+                    const canvas = document.getElementById(spec.canvasId);
+                    if (!canvas) {
+                        continue;
                     }
+                    chartInstances.set(spec.canvasId, new Chart(canvas, buildChartConfig(spec)));
+                }
+            };
+
+            const redrawCharts = () => {
+                for (const spec of chartSpecs) {
+                    const canvas = document.getElementById(spec.canvasId);
+                    if (!canvas) {
+                        continue;
+                    }
+                    const existing = chartInstances.get(spec.canvasId);
+                    if (existing) {
+                        existing.destroy();
+                    }
+                    chartInstances.set(spec.canvasId, new Chart(canvas, buildChartConfig(spec)));
+                }
+            };
+
+            initCharts();
+
+            // 深浅色类名挂在 documentElement，监听其变化即可实时重绘所有图表
+            const themeObserver = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.attributeName === 'class') {
+                        redrawCharts();
+                        break;
+                    }
+                }
+            });
+            themeObserver.observe(document.documentElement, { attributes: true });
+            
+            // 入场动画管理
+            const ENTRANCE_ANIMATIONS = ['fadeIn', 'slideIn'];
+            // animationend 丢失时的兜底时长
+            const ENTRANCE_FALLBACK_MS = 1600;
+            const entrancePlayed = new WeakSet();
+
+            const finishEntrance = (el) => {
+                el.classList.add('entrance-done');
+            };
+
+            const handleEntranceEnd = (event) => {
+                const el = event.currentTarget;
+                // 忽略子元素与伪元素冒泡上来的动画事件
+                if (event.target !== el) {
+                    return;
+                }
+                if (ENTRANCE_ANIMATIONS.includes(event.animationName)) {
+                    finishEntrance(el);
+                }
+            };
+
+            const playEntrance = (el) => {
+                if (entrancePlayed.has(el)) {
+                    return;
+                }
+                entrancePlayed.add(el);
+                el.classList.add('animate-fade-in');
+                el.addEventListener('animationend', handleEntranceEnd);
+                setTimeout(() => finishEntrance(el), ENTRANCE_FALLBACK_MS);
+            };
+
+            const entranceObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) {
+                        return;
+                    }
+                    entranceObserver.unobserve(entry.target);
+                    playEntrance(entry.target);
                 });
             }, { threshold: 0.1 });
-            
-            document.querySelectorAll('.card-hover:not(.animate-fade-in)').forEach(card => {
-                observer.observe(card);
+
+            document.querySelectorAll('.animate-fade-in, .card-hover').forEach(el => {
+                if (el.classList.contains('animate-fade-in')) {
+                    // 静态类：加载时已在播放，只挂收尾逻辑
+                    playEntrance(el);
+                } else {
+                    entranceObserver.observe(el);
+                }
             });
         });
     </script>

@@ -1,38 +1,64 @@
 import os
-import json
-import yaml
-import markdown
-import requests
-import os
+import re
 import sys
-from flask import Flask, render_template, jsonify, send_from_directory, abort
-from datetime import datetime
-from flask import Flask, render_template_string
-import jinja2
+import json
+import time
 import shutil
+import requests
+import markdown
+import jinja2
+import yaml
+from datetime import datetime
+from flask import Flask, render_template, jsonify, send_from_directory, abort
+from markdown.postprocessors import Postprocessor
 
 app = Flask(__name__)
 
-# 导入必要的库
-import time
+# 内置兜底配置：config.json 缺失、损坏或 default 目录都不可用时使用
+BUILTIN_CONFIG = {
+    "github_url": "https://github.com/example",
+    "dark_mode": "auto",
+    "name": "Example User",
+    "bio": "Python Developer",
+    "introduction_file": "Introduction.md",
+    "github_token": "",
+    "theme": {
+        "primary_color": "#6a11cb",
+        "secondary_color": "#2575fc",
+        "dark_primary_color": "#a855f7",
+        "dark_secondary_color": "#60a5fa"
+    },
+    "background": {
+        "image": "background.png",
+        "blur": 8,
+        "overlay_opacity": 0.6,
+        "overlay_color": "#121212",
+        "dark_overlay_color": "#121212"
+    },
+    "contact": {}
+}
 
-# 读取配置文件
+config = {}
+
 @app.before_first_request
 def load_config():
     global config
     try:
         with open('config.json', 'r', encoding='utf-8') as f:
             config = json.load(f)
-    except FileNotFoundError:
+        if not isinstance(config, dict):
+            raise ValueError("config.json 顶层不是JSON对象")
+    except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
+        print(f"config.json 不可用（{type(e).__name__}），尝试从 default 目录恢复")
         # 如果config.json不存在，尝试从default文件夹复制
         default_config_path = os.path.join('default', 'default_config.json')
         if os.path.exists(default_config_path):
-            print(f"config.json不存在，从{default_config_path}复制默认配置")
+            print(f"从{default_config_path}复制默认配置")
             shutil.copy2(default_config_path, 'config.json')
             # 读取复制过来的配置
             with open('config.json', 'r', encoding='utf-8') as f:
                 config = json.load(f)
-            
+
             # 同时检查background.jpg是否存在，如果不存在也从default文件夹复制
             if 'background' in config and 'image' in config['background']:
                 background_image = config['background']['image']
@@ -42,27 +68,33 @@ def load_config():
         else:
             # 如果default_config.json也不存在，使用内置默认配置
             print("default/default_config.json不存在，使用内置默认配置")
-            config = {
-                "github_url": "https://github.com/example",
-                "dark_mode": "auto",
-                "name": "Example User",
-                "bio": "Python Developer",
-                "introduction_file": "Introduction.md",
-                "github_token": "",  # 添加GitHub令牌配置项
-                "theme": {
-                    "primary_color": "#6a11cb",
-                    "secondary_color": "#2575fc"
-                },
-                "background": {
-                    "image": "background.png",
-                    "blur": 8,
-                    "overlay_opacity": 0.6,
-                    "overlay_color": "#121212"
-                }
-            }
+            config = dict(BUILTIN_CONFIG)
             # 保存默认配置
             with open('config.json', 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
+
+    # 补齐缺失的顶层键，避免模板渲染时 KeyError
+    for key, value in BUILTIN_CONFIG.items():
+        config.setdefault(key, value)
+    for key in ('primary_color', 'secondary_color', 'dark_primary_color', 'dark_secondary_color'):
+        config.setdefault('theme', {}).setdefault(key, BUILTIN_CONFIG['theme'][key])
+    for key in ('blur', 'overlay_opacity', 'overlay_color', 'dark_overlay_color', 'image'):
+        config.setdefault('background', {}).setdefault(key, BUILTIN_CONFIG['background'][key])
+    config.setdefault('contact', {})
+
+# 读取 GitHub 令牌
+def get_github_token():
+    token_file = os.path.join(app.root_path, 'github_token.txt')
+    if os.path.exists(token_file):
+        try:
+            with open(token_file, 'r', encoding='utf-8') as f:
+                return f.read().strip().replace('"', '').replace("'", '')
+        except Exception as e:
+            print(f"读取GitHub令牌时出错: {e}")
+    return config.get('github_token', '')
+
+# 只对这些域名注入令牌，避免令牌外发到其他主机
+TOKEN_HOSTS = ('api.github.com',)
 
 # 创建通用的GitHub API请求函数
 def make_github_request(url, timeout=5):
@@ -73,28 +105,10 @@ def make_github_request(url, timeout=5):
         
         # 准备请求头
         headers = {'Accept': 'application/vnd.github.v3+json'}
-        github_token = ''
-        
-        # 首先尝试从github_token.txt文件中读取令牌
-        token_file = os.path.join(app.root_path, 'github_token.txt')
-        try:
-            if os.path.exists(token_file):
-                with open(token_file, 'r', encoding='utf-8') as f:
-                    github_token = f.read().strip()
-                # 移除可能的空白字符和引号
-                github_token = github_token.replace('"', '').replace("'", '')
-                print(f"从github_token.txt文件中读取令牌成功")
-            else:
-                # 如果文件不存在，尝试从配置中获取
-                github_token = config.get('github_token', '')
-                print("github_token.txt文件不存在，尝试从配置中获取令牌")
-        except Exception as e:
-            print(f"读取GitHub令牌时出错: {e}")
-            # 出错时，尝试从配置中获取
-            github_token = config.get('github_token', '')
+        github_token = get_github_token()
         
         # 如果配置了GitHub令牌，添加到请求头
-        if github_token:
+        if github_token and any(host in url for host in TOKEN_HOSTS):
             headers['Authorization'] = f'token {github_token}'
             print(f"使用GitHub令牌进行认证")
         else:
@@ -111,12 +125,92 @@ def make_github_request(url, timeout=5):
         return response
     except Exception as e:
         print(f"GitHub API请求异常: {e}")
-        # 创建一个模拟的响应对象
+        # 请求失败时返回模拟响应，调用方按状态码走降级逻辑
         class MockResponse:
             def __init__(self):
                 self.status_code = 500
                 self.text = "模拟错误响应"
+
+            def json(self):
+                return []
         return MockResponse()
+
+# Markdown 渲染配置
+MARKDOWN_EXTENSIONS = ['extra', 'codehilite', 'toc', 'tables', 'md_in_html']
+MARKDOWN_EXTENSION_CONFIGS = {
+    'codehilite': {
+        'css_class': 'highlight',
+        'linenums': False
+    }
+}
+
+# 参与合并的行内级标签，出现这些标签的行才会与相邻行拼接
+_INLINE_TAGS = {
+    'img', 'span', 'a', 'b', 'i', 'em', 'strong', 'small', 'sub', 'sup',
+    'br', 'label', 'abbr', 'mark', 'kbd', 'samp', 'var', 'u', 's', 'q', 'cite',
+    'time', 'svg', 'picture', 'source', 'iframe',
+}
+
+# 这些标签内部的内容禁止参与合并
+_VERBATIM_TAGS = {'pre', 'code', 'script', 'style', 'textarea'}
+
+class InlineTagJoinPostprocessor(Postprocessor):
+    """把渲染结果中相邻的行内级标签合并到同一行，以空格分隔。"""
+
+    _TAG_RE = re.compile(r'<\s*(/?)\s*([a-zA-Z][a-zA-Z0-9-]*)')
+    _VERBATIM_BLOCK_RE = re.compile(
+        r'<(pre|script|style|textarea)\b.*?</\1\s*>',
+        re.IGNORECASE | re.DOTALL
+    )
+
+    def _has_inline_tag(self, line):
+        return any(
+            match.group(2).lower() in _INLINE_TAGS
+            for match in self._TAG_RE.finditer(line)
+        )
+
+    def run(self, text):
+        # 抠出 <pre>/<script> 等逐字块，占位后再合并，避免破坏代码块内部换行
+        verbatim_blocks = []
+
+        def _stash(match):
+            verbatim_blocks.append(match.group(0))
+            return f'\x00VERBATIM{len(verbatim_blocks) - 1}\x00'
+
+        text = self._VERBATIM_BLOCK_RE.sub(_stash, text)
+
+        lines = text.split('\n')
+        result = []
+        for line in lines:
+            stripped = line.strip()
+            if (stripped and result and result[-1].strip()
+                    and self._has_inline_tag(result[-1]) and self._has_inline_tag(stripped)):
+                result[-1] = f'{result[-1].rstrip()} {stripped}'
+            else:
+                result.append(line)
+        text = '\n'.join(result)
+
+        # 还原逐字块，还原时保持独立成行
+        for index, block in enumerate(verbatim_blocks):
+            text = text.replace(f'\x00VERBATIM{index}\x00', block)
+        return text
+
+class InlineTagJoinExtension(markdown.Extension):
+    def extendMarkdown(self, md):
+        md.postprocessors.register(
+            InlineTagJoinPostprocessor(md),
+            'inline_tag_join',
+            # 收尾阶段执行，确保拿到的是最终 HTML 行结构
+            25
+        )
+
+def render_markdown(md_text):
+    """统一的 Markdown 转 HTML 入口，新增转换调用必须走此函数。"""
+    return markdown.markdown(
+        md_text,
+        extensions=MARKDOWN_EXTENSIONS + [InlineTagJoinExtension()],
+        extension_configs=MARKDOWN_EXTENSION_CONFIGS,
+    )
 
 # 从 GitHub API 获取用户信息
 def get_github_user_info():
@@ -141,20 +235,31 @@ def get_github_user_info():
             repos_response = make_github_request(f'https://api.github.com/users/{username}/repos?sort=pushed&per_page=100')
             if repos_response.status_code == 200:
                 repos = repos_response.json()
+                if not isinstance(repos, list):
+                    repos = []
 
                 # 获取总仓库数和总 stars 数
                 total_repos = len(repos)
-                total_stars = sum(repo.get('stargazers_count', 0) for repo in repos)
+                total_stars = sum(repo.get('stargazers_count') or 0 for repo in repos)
 
                 # 获取同名仓库的 README
                 readme_content = get_readme_content(username)
 
                 # 获取最近有推送的 5 个仓库
-                recent_repos = sorted(repos, key=lambda x: x.get('pushed_at', ''), reverse=True)[:5]
+                recent_repos = sorted(
+                    repos,
+                    key=lambda x: x.get('pushed_at') or '',
+                    reverse=True
+                )[:5]
 
-                # 获取用户的活动数据（过去12个月的提交统计）
-                # 传递已获取的repos参数，避免重复获取
-                activity_data = get_github_activity_data(username, repos)
+                # 获取用户的活动数据（最近12个自然月的贡献统计）
+                activity_data, activity_labels = get_github_activity_data(username, repos)
+
+                # 获取 Star 增长历史，复用已获取的repos，无额外API调用
+                star_data, star_labels = get_github_star_history(username, repos)
+
+                # 获取用户加入的组织列表
+                organizations = get_github_organizations(username)
 
                 # 分析用户的技术栈
                 tech_stack = analyze_tech_stack(repos)
@@ -168,6 +273,10 @@ def get_github_user_info():
                     "readme_content": readme_content,
                     "recent_repos": recent_repos,
                     "activity_data": activity_data,
+                    "activity_labels": activity_labels,
+                    "star_data": star_data,
+                    "star_labels": star_labels,
+                    "organizations": organizations,
                     "tech_stack": tech_stack
                 }
     except Exception as e:
@@ -185,6 +294,10 @@ def get_github_user_info():
         "readme_content": get_local_readme(),
         "recent_repos": [],
         "activity_data": [65, 59, 80, 81, 56, 55, 70, 65, 85, 75, 60, 75],  # 默认数据
+        "activity_labels": _activity_month_labels(datetime.now()),
+        "star_data": [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65],  # 默认数据
+        "star_labels": _activity_month_labels(datetime.now()),
+        "organizations": [],
         "tech_stack": [
             {"name": "Python", "color": "#6a11cb"},
             {"name": "JavaScript", "color": "#2575fc"},
@@ -193,185 +306,350 @@ def get_github_user_info():
         ]
     }
 
-# 获取用户的GitHub活动数据（过去12个月的推送统计）
-# 使用GitHub Events API获取更准确的活动数据
-# 确保数据按正确的月份顺序显示
-import calendar
+def _parse_github_date(date_str):
+    """解析 GitHub API 的 ISO 8601 时间戳，失败返回 None。"""
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+    except (ValueError, TypeError):
+        pass
+    try:
+        # 兼容带时区偏移的格式，如 2024-01-01T08:00:00+08:00
+        return datetime.fromisoformat(date_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except (ValueError, TypeError):
+        return None
+
+def _month_index(event_date, now):
+    """把事件日期折算成「距当前月的月数」，索引 0 为当前月，11 为 11 个月前。"""
+    months_diff = (now.year - event_date.year) * 12 + (now.month - event_date.month)
+    if months_diff < 0:
+        months_diff = 0
+    return months_diff
+
+# 获取用户的GitHub活动数据（最近12个自然月的贡献统计）
+def _activity_month_labels(now):
+    """生成图表 X 轴标签：最近 12 个自然月，最旧月 → 最新月。"""
+    labels = []
+    for i in range(11, -1, -1):
+        total = (now.year * 12 + now.month - 1) - i
+        year, month = divmod(total, 12)
+        labels.append(f'{month + 1}月')
+    return labels
+
+def _activity_window_start(now):
+    """统计窗口起点：11 个月前的 1 号，覆盖 12 个自然月且跨度小于 1 年。"""
+    total = (now.year * 12 + now.month - 1) - 11
+    year, month = divmod(total, 12)
+    return datetime(year, month + 1, 1)
+
+# Star 增长历史
+def get_github_star_history(username, repos=None):
+    """返回 (star_data, star_labels)：最近 12 个自然月的累计 star 总量。"""
+    default_data = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]
+
+    try:
+        print(f"开始获取GitHub Star增长数据: {username}")
+
+        now = datetime.now()
+        labels = _activity_month_labels(now)
+
+        if not repos:
+            print("没有仓库数据，返回默认Star数据")
+            return default_data, labels
+
+        # 索引 0 为当前月，11 为 11 个月前；索引越小月份越新
+        monthly_totals = [0] * 12
+        for repo in repos:
+            if not isinstance(repo, dict):
+                continue
+            stars = repo.get('stargazers_count') or 0
+            if stars <= 0:
+                continue
+
+            created_date = _parse_github_date(repo.get('created_at'))
+            if created_date is None:
+                continue
+
+            month_index = _month_index(created_date, now)
+            if month_index < 0:
+                continue
+
+            # 仓库在创建月之后一直存在，因此填充「当前月 → 创建月」这一段
+            last_index = month_index if month_index < 12 else 11
+            for index in range(last_index + 1):
+                monthly_totals[index] += stars
+
+        # 反转为「最旧月 → 最新月」，与图表标签顺序对齐
+        star_data = monthly_totals[::-1]
+
+        if sum(star_data) == 0:
+            print("没有获取到Star数据，返回默认数据")
+            return default_data, labels
+
+        print(f"Star增长统计完成，当前累计: {star_data[-1]}")
+        return star_data, labels
+    except Exception as e:
+        print(f"获取GitHub Star增长数据异常: {e}")
+
+    return default_data, _activity_month_labels(datetime.now())
+
+# 获取用户加入的 GitHub 组织
+def get_github_organizations(username):
+    """返回组织列表，每项含 login / avatar_url / url。"""
+    try:
+        print(f"开始获取GitHub组织列表: {username}")
+
+        orgs_response = make_github_request(
+            f'https://api.github.com/users/{username}/orgs?per_page=100'
+        )
+        if orgs_response.status_code != 200:
+            print(f"无法获取组织数据，状态码: {orgs_response.status_code}")
+            return []
+
+        orgs = orgs_response.json()
+        if not isinstance(orgs, list):
+            print("组织响应不是JSON数组")
+            return []
+
+        organizations = []
+        seen_logins = set()
+        for org in orgs:
+            if not isinstance(org, dict):
+                continue
+            login = (org.get('login') or '').strip()
+            avatar_url = org.get('avatar_url')
+            if not login or not avatar_url:
+                continue
+
+            # 按 login 小写去重，避免重复条目
+            key = login.lower()
+            if key in seen_logins:
+                continue
+            seen_logins.add(key)
+
+            organizations.append({
+                'login': login,
+                'avatar_url': avatar_url,
+                'url': org.get('url') or f"https://github.com/{login}"
+            })
+
+        # 按 login 字母序排序，保证输出稳定
+        organizations.sort(key=lambda item: item['login'].lower())
+        print(f"组织列表获取完成，共 {len(organizations)} 个")
+        return organizations
+    except Exception as e:
+        print(f"获取GitHub组织列表异常: {e}")
+        return []
+
+def get_github_contribution_months(username, token=''):
+    """通过 GraphQL contributionsCollection 获取官方贡献日历的月度聚合。"""
+    if not token:
+        return None, None
+
+    now = datetime.now()
+    window_start = _activity_window_start(now)
+
+    query = """
+    query($login: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $login) {
+        contributionsCollection(from: $from, to: $to) {
+          contributionCalendar {
+            totalContributions
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    variables = {
+        'login': username,
+        'from': window_start.strftime('%Y-%m-%dT00:00:00Z'),
+        'to': now.strftime('%Y-%m-%dT23:59:59Z'),
+    }
+
+    try:
+        response = requests.post(
+            'https://api.github.com/graphql',
+            json={'query': query, 'variables': variables},
+            headers={'Authorization': f'bearer {token}', 'Accept': 'application/vnd.github+json'},
+            timeout=5,
+            verify=False,
+        )
+        print(f"GitHub GraphQL请求: 贡献日历, 状态码: {response.status_code}")
+        if response.status_code != 200:
+            return None, None
+
+        payload = response.json()
+        if not isinstance(payload, dict):
+            print("GraphQL响应不是JSON对象")
+            return None, None
+        if payload.get('errors'):
+            print(f"GraphQL贡献日历查询出错: {payload['errors']}")
+            return None, None
+
+        collection = (payload.get('data') or {}).get('user') or {}
+        calendar = (collection.get('contributionsCollection') or {}).get('contributionCalendar')
+        if not calendar:
+            print("GraphQL未返回贡献日历数据")
+            return None, None
+
+        counts = [0] * 12
+        for week in calendar.get('weeks') or []:
+            for day in week.get('contributionDays') or []:
+                raw_date = day.get('date')
+                if not raw_date:
+                    continue
+                day_date = _parse_github_date(f"{raw_date}T00:00:00Z")
+                if day_date is None or day_date < window_start:
+                    continue
+                month_index = _month_index(day_date, now)
+                if 0 <= month_index < 12:
+                    counts[month_index] += day.get('contributionCount') or 0
+
+        print(f"贡献日历统计完成，窗口内总贡献: {sum(counts)}")
+        return counts, _activity_month_labels(now)
+    except Exception as e:
+        print(f"获取贡献日历异常: {type(e).__name__}: {e}")
+        return None, None
+
 def get_github_activity_data(username, repos=None):
+    """返回 (activity_data, activity_labels)。"""
+    default_data = [65, 59, 80, 81, 56, 55, 70, 65, 85, 75, 60, 75]
+
     try:
         print(f"开始获取GitHub活动数据: {username}")
-        
-        # 创建一个过去12个月的计数器，索引0表示当前月份，索引11表示11个月前
-        from datetime import datetime, timedelta
+
         now = datetime.now()
-        activity_counts = [0] * 12  # 初始化过去12个月的计数
-        
-        # 计算过去12个月的开始日期（12个月前的今天）
-        # 注意：GitHub Events API返回的事件是按时间倒序排列的
-        earliest_date = now - timedelta(days=365)  # 过去一年的日期
-        
-        # 1. 首先尝试通过用户Events API获取PushEvent数据
+        labels = _activity_month_labels(now)
+        # 窗口：11 个月前的 1 号至当前时刻，覆盖 12 个自然月且不超过 1 年
+        window_start = _activity_window_start(now)
+        earliest_date = window_start
+
+        # 1. 优先使用 GraphQL 官方贡献日历，口径与 GitHub 个人主页一致
+        counts, gql_labels = get_github_contribution_months(username, get_github_token())
+        if counts is not None and sum(counts) > 0:
+            return counts[::-1], gql_labels
+
+        print("贡献日历不可用，回退到 REST 统计")
+
+        # 按自然月聚合的推送事件数；索引 0 为当前月，11 为 11 个月前
+        push_counts = [0] * 12
+        # 同一仓库同秒内的多个 PushEvent 视为一次推送，用于去重
+        seen_pushes = set()
+
+        # 2. 用户 Events API（GitHub 官方活动时间线），按时间倒序翻页
         page = 1
-        max_pages = 5  # 限制获取的页数，避免过多API调用
-        event_found = False
-        
+        max_pages = 3
         while page <= max_pages:
             events_url = f"https://api.github.com/users/{username}/events?page={page}&per_page=100"
             events_response = make_github_request(events_url)
-            
+
             if events_response.status_code != 200:
                 print(f"无法获取事件数据，状态码: {events_response.status_code}")
                 break
-            
+
             events = events_response.json()
-            
-            if not events:
-                break  # 没有更多事件了
-            
-            # 处理每个事件
-            page_has_recent_events = False
+            if not isinstance(events, list) or not events:
+                break
+
+            reached_window_edge = False
             for event in events:
-                # 只处理PushEvent类型的事件
-                if event['type'] == 'PushEvent':
-                    event_found = True
-                    # 获取事件发生时间
-                    event_date_str = event['created_at']
-                    event_date = datetime.strptime(event_date_str, '%Y-%m-%dT%H:%M:%SZ')
-                    
-                    # 检查事件是否在过去12个月内
-                    if event_date >= earliest_date:
-                        page_has_recent_events = True
-                        # 计算这个事件是多少个月前的
-                        # 精确计算月份差异，考虑日期
-                        years_diff = now.year - event_date.year
-                        months_diff = now.month - event_date.month
-                        
-                        # 如果当前日期小于事件日期的日期部分，需要调整
-                        if now.day < event_date.day:
-                            months_diff -= 1
-                            if months_diff < 0:
-                                years_diff -= 1
-                                months_diff = 11
-                        
-                        total_months_diff = years_diff * 12 + months_diff
-                        
-                        # 确保在0-11范围内
-                        if 0 <= total_months_diff < 12:
-                            # 增加这个月的推送次数
-                            activity_counts[total_months_diff] += 1
-            
-            # 如果当前页没有最近事件，可能是因为已经获取了足够旧的数据
-            # 但继续获取下一页以确保覆盖所有可能的事件
-            page += 1
-        
-        # 2. 如果通过Events API没有获取到足够的数据，使用仓库提交历史作为补充
-        # 这里改进：无论Events API获取了多少数据，都用仓库数据作为补充，以确保完整性
-        if repos and len(repos) > 0:
-            print("使用仓库提交历史作为补充数据")
-            
-            # 限制处理的仓库数量
-            if len(repos) > 5:
-                repos = repos[:5]
-            
-            for repo in repos:
-                try:
-                    # 获取仓库的提交历史（限制为最近100个提交）
-                    commits_url = f"https://api.github.com/repos/{username}/{repo['name']}/commits?author={username}&per_page=100"
-                    commits_response = make_github_request(commits_url)
-                    
-                    if commits_response.status_code == 200:
-                        commits = commits_response.json()
-                        
-                        # 计算每个月的提交数量
-                        for commit in commits:
-                            commit_date_str = commit['commit']['author']['date']
-                            commit_date = datetime.strptime(commit_date_str, '%Y-%m-%dT%H:%M:%SZ')
-                            
-                            # 检查提交是否在过去12个月内
-                            if commit_date >= earliest_date:
-                                # 计算这个提交是多少个月前的
-                                years_diff = now.year - commit_date.year
-                                months_diff = now.month - commit_date.month
-                                
-                                # 如果当前日期小于提交日期的日期部分，需要调整
-                                if now.day < commit_date.day:
-                                    months_diff -= 1
-                                    if months_diff < 0:
-                                        years_diff -= 1
-                                        months_diff = 11
-                                
-                                total_months_diff = years_diff * 12 + months_diff
-                                
-                                # 确保在0-11范围内
-                                if 0 <= total_months_diff < 12:
-                                    # 增加这个月的提交计数（不考虑是否已有Events数据）
-                                    activity_counts[total_months_diff] += 1
-                except Exception as e:
-                    print(f"获取仓库 {repo['name']} 的提交历史时出错: {e}")
+                if event.get('type') != 'PushEvent':
                     continue
-        
-        # 3. 调整数据顺序，使其与图表标签顺序一致
-        # 图表通常期望数据从最旧的月份到最新的月份显示
-        # 但为了确保顺序与UI期望一致，我们需要确认月份顺序的逻辑
-        
-        # 创建一个新的数组，按照从最早到最近的顺序排列（从12个月前到当前月）
-        # 例如，如果现在是10月，那么顺序应该是：10月(去年)、11月(去年)、12月(去年)、1月、2月...9月、10月(今年)
-        ordered_activity = []
-        current_month = now.month
-        
-        for i in range(12):
-            # 计算当前需要取的月份索引
-            # 从当前月的上个月开始，往前推11个月
-            # 例如，当前是10月(索引9)，那么顺序是: 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 11, 10
-            # 这样ordered_activity[0]就是最旧的数据，ordered_activity[11]是最新的数据
-            month_index = (now.month - 1 - i) % 12
-            ordered_activity.append(activity_counts[month_index])
-        
-        # 反转数组，使ordered_activity[0]是最旧的月份，ordered_activity[11]是最新的月份
-        ordered_activity = ordered_activity[::-1]
-        
-        # 4. 确保数据合理性
+
+                event_date = _parse_github_date(event.get('created_at'))
+                if event_date is None:
+                    continue
+
+                if event_date < earliest_date:
+                    reached_window_edge = True
+                    continue
+
+                # 只统计当前作者本人仓库的推送
+                if event.get('actor', {}).get('login', '').lower() != username.lower():
+                    continue
+
+                repo_name = event.get('repo', {}).get('name', '')
+                if repo_name and not repo_name.lower().startswith(f'{username.lower()}/'):
+                    continue
+
+                month_index = _month_index(event_date, now)
+                if 0 <= month_index < 12:
+                    # 以「仓库 + 推送时间」去重，避免同一推送被重复计数
+                    push_key = (repo_name, event_date.strftime('%Y-%m-%dT%H:%M:%SZ'))
+                    if push_key in seen_pushes:
+                        continue
+                    seen_pushes.add(push_key)
+                    push_counts[month_index] += 1
+
+            if reached_window_edge:
+                break
+            page += 1
+
+        # 记录 Events API 已覆盖的「仓库 + 月份」，补齐时跳过，防止重复计数
+        events_covered = {
+            (repo_name, _month_index(datetime.strptime(push_key[1], '%Y-%m-%dT%H:%M:%SZ'), now))
+            for push_key in seen_pushes
+        }
+
+        # 3. 用仓库提交历史补齐 Events API 未覆盖的月份
+        if repos:
+            print("使用仓库提交历史补齐活动数据")
+            for repo in repos:
+                repo_name = repo.get('name')
+                if not repo_name:
+                    continue
+                try:
+                    commits_url = (
+                        f"https://api.github.com/repos/{username}/{repo_name}/commits"
+                        f"?author={username}&since={earliest_date.strftime('%Y-%m-%dT%H:%M:%SZ')}&per_page=100"
+                    )
+                    commits_response = make_github_request(commits_url)
+                    if commits_response.status_code != 200:
+                        continue
+
+                    commits = commits_response.json()
+                    if not isinstance(commits, list):
+                        continue
+                    for commit in commits:
+                        commit_date = _parse_github_date(
+                            commit.get('commit', {}).get('author', {}).get('date')
+                        )
+                        if commit_date is None or commit_date < earliest_date:
+                            continue
+
+                        month_index = _month_index(commit_date, now)
+                        if 0 <= month_index < 12:
+                            # Events API 已统计过的「仓库 + 月份」不重复计数
+                            if (repo_name, month_index) in events_covered:
+                                continue
+                            events_covered.add((repo_name, month_index))
+                            push_counts[month_index] += 1
+                except Exception as e:
+                    print(f"获取仓库 {repo_name} 的提交历史时出错: {e}")
+                    continue
+
+        # 4. 反转为「最旧月 → 最新月」，与图表标签顺序对齐
+        ordered_activity = push_counts[::-1]
+
         if sum(ordered_activity) == 0:
             print("没有获取到活动数据，返回默认数据")
-            return [65, 59, 80, 81, 56, 55, 70, 65, 85, 75, 60, 75]  # 默认数据
-        
-        # 5. 对数据进行平滑处理，但保持数据的真实性
-        # 只在数据波动较大时进行轻微平滑
-        smoothed_data = []
-        for i in range(12):
-            # 简单的移动平均，但保留原始数据的相对大小
-            values = [ordered_activity[i]]
-            if i > 0:
-                values.append(ordered_activity[i-1])
-            if i < 11:
-                values.append(ordered_activity[i+1])
-            
-            # 计算平均值，但确保不小于最小值的80%
-            avg_value = int(sum(values) / len(values))
-            min_value = min(values)
-            smoothed_data.append(max(avg_value, int(min_value * 0.8)))
-        
-        # 6. 限制最大值，避免图表比例失调
-        max_value = max(smoothed_data)
-        if max_value > 200:
-            # 只对特别大的值进行缩放
-            scaled_data = []
-            for v in smoothed_data:
-                if v > 200:
-                    scaled_data.append(int(v * 200 / max_value))
-                else:
-                    scaled_data.append(v)
-            return scaled_data
-        
-        return smoothed_data
+            return default_data, labels
+
+        # 不做平滑与缩放，直接返回真实统计值
+        return ordered_activity, labels
     except Exception as e:
         print(f"获取GitHub活动数据异常: {e}")
-    
-    # 如果发生任何错误，返回默认数据
-    return [65, 59, 80, 81, 56, 55, 70, 65, 85, 75, 60, 75]  # 默认数据
+
+    return default_data, _activity_month_labels(datetime.now())
 
 # 分析用户的技术栈
-# 限制处理的仓库数量，优化性能
 cached_tech_stack = None
 cached_timestamp = 0
 
@@ -413,19 +691,21 @@ def analyze_tech_stack(repos):
                     
                     if languages_response.status_code == 200:
                         languages_data = languages_response.json()
-                        
+                        if not isinstance(languages_data, dict):
+                            continue
+
                         # 更新语言统计
                         for lang, bytes_count in languages_data.items():
+                            if not isinstance(bytes_count, (int, float)):
+                                continue
                             if lang not in language_stats:
                                 language_stats[lang] = 0
                             language_stats[lang] += bytes_count
                             total_bytes += bytes_count
                 except Exception as e:
-                    print(f"获取仓库 {repo['name']} 的语言信息时出错: {e}")
+                    print(f"获取仓库 {repo.get('name')} 的语言信息时出错: {e}")
                     continue
-            
 
-        
         # 如果没有获取到语言数据，返回默认技术栈
         if not language_stats:
             print("没有获取到语言数据，返回默认技术栈")
@@ -448,23 +728,32 @@ def analyze_tech_stack(repos):
         # 按使用比例排序，取前10种语言
         sorted_languages = sorted(language_ratios.items(), key=lambda x: x[1], reverse=True)[:10]
         
-        # 获取配置中的主题色
-        from flask import current_app
-        theme = current_app.config.get('theme', {
-            'primary_color': '#6a11cb',
-            'secondary_color': '#2575fc',
-            'dark_primary_color': '#a855f7',
-            'dark_secondary_color': '#60a5fa'
-        })
-        
+        # 主题色来自全局 config，与模板注入的是同一份
+        theme = config.get('theme', {})
+        base_light = [
+            theme.get('primary_color') or '#6a11cb',
+            theme.get('secondary_color') or '#2575fc',
+        ]
+        base_dark = [
+            theme.get('dark_primary_color') or '#a855f7',
+            theme.get('dark_secondary_color') or '#60a5fa',
+        ]
+
+        def _to_rgb(hex_color):
+            """解析 #RRGGBB；3 位缩写展开，非法值回落主色。"""
+            value = (hex_color or '').strip().lstrip('#')
+            if len(value) == 3:
+                value = ''.join(c * 2 for c in value)
+            if len(value) != 6:
+                value = '6a11cb'
+            try:
+                return int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
+            except ValueError:
+                return 0x6a, 0x11, 0xcb
+
         # 根据主题色生成和谐的标签颜色
         def generate_harmonious_color(base_color, index, is_dark=False):
-            # 简单的颜色变体生成算法
-            # 将HEX颜色转换为RGB
-            hex_color = base_color.lstrip('#')
-            r = int(hex_color[0:2], 16)
-            g = int(hex_color[2:4], 16)
-            b = int(hex_color[4:6], 16)
+            r, g, b = _to_rgb(base_color)
             
             # 根据索引调整颜色亮度和饱和度
             factor = 1.0 - (index * 0.15)  # 递减因子
@@ -487,11 +776,8 @@ def analyze_tech_stack(repos):
             return f'#{r:02x}{g:02x}{b:02x}'
         
         # 检查是否为暗色模式
-        is_dark = current_app.config.get('dark_mode', 'auto') == 'dark'
-        if is_dark:
-            base_colors = [theme['dark_primary_color'], theme['dark_secondary_color']]
-        else:
-            base_colors = [theme['primary_color'], theme['secondary_color']]
+        is_dark = config.get('dark_mode', 'auto') == 'dark'
+        base_colors = base_dark if is_dark else base_light
         color_map = {
             'Python': generate_harmonious_color(base_colors[0], 0, is_dark),
             'JavaScript': generate_harmonious_color(base_colors[1], 0, is_dark),
@@ -577,57 +863,25 @@ def analyze_tech_stack(repos):
             {"name": "Flask", "color": "green"}
         ]
 
-# 获取同名仓库的 README","}]}}}
+# 获取同名仓库的 README
 def get_readme_content(username):
     try:
         print(f"尝试获取GitHub同名仓库README: {username}/{username}")
-        # 配置requests不验证SSL证书（解决本地环境中的证书验证问题）
-        import ssl
-        ssl._create_default_https_context = ssl._create_unverified_context
-        
-        # 尝试获取同名仓库的 README（main分支）
-        readme_url_main = f'https://raw.githubusercontent.com/{username}/{username}/main/README.md'
-        print(f"尝试获取README URL (main): {readme_url_main}")
-        readme_response = requests.get(readme_url_main, timeout=5, verify=False)
-        print(f"README响应状态码 (main): {readme_response.status_code}")
-        
-        if readme_response.status_code == 200:
-            print("成功获取main分支的README")
-            # 将 Markdown 转换为 HTML 使用扩展
-            return markdown.markdown(
-                readme_response.text,
-                extensions=['extra', 'codehilite', 'toc', 'tables', 'md_in_html'],
-                extension_configs={
-                    'codehilite': {
-                        'css_class': 'highlight',
-                        'linenums': False
-                    }
-                }
-            )
-        
-        # 尝试其他分支（master）
-        readme_url_master = f'https://raw.githubusercontent.com/{username}/{username}/master/README.md'
-        print(f"尝试获取README URL (master): {readme_url_master}")
-        readme_response = requests.get(readme_url_master, timeout=5, verify=False)
-        print(f"README响应状态码 (master): {readme_response.status_code}")
-        
-        if readme_response.status_code == 200:
-            print("成功获取master分支的README")
-            return markdown.markdown(
-                readme_response.text,
-                extensions=['extra', 'codehilite', 'toc', 'tables', 'md_in_html'],
-                extension_configs={
-                    'codehilite': {
-                        'css_class': 'highlight',
-                        'linenums': False
-                    }
-                }
-            )
-        
+
+        # 依次尝试 main / master 分支
+        for branch in ('main', 'master'):
+            readme_url = f'https://raw.githubusercontent.com/{username}/{username}/{branch}/README.md'
+            readme_response = make_github_request(readme_url)
+            print(f"README响应状态码 ({branch}): {readme_response.status_code}")
+
+            if readme_response.status_code == 200:
+                print(f"成功获取{branch}分支的README")
+                return render_markdown(readme_response.text)
+
         print(f"GitHub README获取失败，状态码: {readme_response.status_code}")
     except Exception as e:
         print(f"GitHub README获取异常: {type(e).__name__}: {str(e)}")
-    
+
     # 如果获取失败，读取本地文件
     print("使用本地README文件")
     return get_local_readme()
@@ -640,16 +894,7 @@ def get_local_readme():
             with open(introduction_file, 'r', encoding='utf-8') as f:
                 # 使用多个扩展来增强 Markdown 转换
                 md_text = f.read()
-                return markdown.markdown(
-                    md_text,
-                    extensions=['extra', 'codehilite', 'toc', 'tables', 'md_in_html'],
-                    extension_configs={
-                        'codehilite': {
-                            'css_class': 'highlight',
-                            'linenums': False
-                        }
-                    }
-                )
+                return render_markdown(md_text)
     except Exception:
         pass
     
@@ -713,9 +958,7 @@ def serve_root_file(filename):
     abort(404)
 
 def generate_static_html():
-    """
-    生成静态HTML文件，用于部署到GitHub Pages
-    """
+    """生成静态HTML文件，用于部署到GitHub Pages"""
     print("开始生成静态HTML文件...")
     
     # 创建静态文件目录
@@ -764,7 +1007,7 @@ def generate_static_html():
                 with open(config['introduction_file'], 'r', encoding='utf-8') as f:
                     introduction_content = f.read()
                 # 转换Markdown为HTML
-                introduction_content = markdown.markdown(introduction_content)
+                introduction_content = render_markdown(introduction_content)
             except Exception as e:
                 print(f"警告：无法读取或解析介绍文件: {e}")
         
@@ -784,6 +1027,9 @@ def generate_static_html():
             'introduction_content': introduction_content,
             'tech_stack': [],  # 由于没有GitHub数据，这里使用空列表
             'activity_data': [],  # 由于没有GitHub数据，这里使用空列表
+            'activity_labels': _activity_month_labels(datetime.now()),
+            'star_data': [],
+            'star_labels': _activity_month_labels(datetime.now()),
             'error_message': None,
             'github_info': {
                 'name': config.get('name', 'Example User'),
@@ -792,7 +1038,11 @@ def generate_static_html():
                 'html_url': config.get('github_url', 'https://github.com/example'),
                 'public_repos': 0,
                 'followers': 0,
-                'activity_data': []  # 添加可序列化的activity_data键
+                'activity_data': [],  # 添加可序列化的activity_data键
+                'activity_labels': _activity_month_labels(datetime.now()),
+                'star_data': [],
+                'star_labels': _activity_month_labels(datetime.now()),
+                'organizations': []
             },
             'now': datetime.now()  # 添加当前时间对象，用于显示年份
         }
@@ -853,7 +1103,6 @@ def generate_static_html():
     
     return True
 
-
 if __name__ == '__main__':
     # 检查是否需要生成静态HTML
     if len(sys.argv) > 1 and sys.argv[1] == 'generate_static':
@@ -861,5 +1110,9 @@ if __name__ == '__main__':
     else:
         # 设置环境变量，使得 GitHub Pages 能够正确运行
         os.environ['FLASK_APP'] = 'app.py'
-        # 在开发环境中运行
-        app.run(debug=True, host='0.0.0.0', port=5000)
+        # 监听地址与端口可由环境变量覆盖；默认 0.0.0.0 以便容器内可达
+        app.run(
+            debug=True,
+            host=os.environ.get('HOST', '0.0.0.0'),
+            port=int(os.environ.get('PORT', 5000)),
+        )
